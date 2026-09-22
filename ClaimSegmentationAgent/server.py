@@ -1,266 +1,51 @@
-"""
-server.py — Claim Segmentation Agent
-──────────────────────────────────────
-LangGraph agent that computes the STP (Straight-Through-Processing) score
-and classification for a claim and explains the routing to the policyholder.
 
-Port: 8003
-MCP : http://localhost:8000/api/v1/segmentation/mcp
-
-Run:
-    py -3 server.py
-"""
-
-import json
-import logging
-import os
-import sys
-import time
-import traceback
-from datetime import datetime, timedelta
-from typing import Annotated, TypedDict
-
-import uvicorn
-from dotenv import load_dotenv, find_dotenv
-from fastapi import FastAPI, Request
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
-from langchain_core.messages import AIMessage, SystemMessage
-from langchain_mcp_adapters.client import MultiServerMCPClient
-from langchain_openai.chat_models import AzureChatOpenAI
-from langgraph.graph import END, START, StateGraph
-from langgraph.graph.message import add_messages
-from langgraph.prebuilt import ToolNode
-
-load_dotenv(find_dotenv())
-
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
-    stream=sys.stdout,
-    force=True,
-)
-logger = logging.getLogger("claim_segmentation_agent")
-
-PHOENIX_API_KEY = os.getenv("PHOENIX_API_KEY", "")
-PHOENIX_ENDPOINT = os.getenv("PHOENIX_ENDPOINT", "")
-MCP_URL = os.getenv("MCP_URL", "http://localhost:8000/api/v1/segmentation/mcp")
-AGENT_PORT = int(os.getenv("AGENT_PORT", "8003"))
-
-config_mcp_server = {
-    "segmentation_mcp": {
-        "url": MCP_URL,
-        "transport": "streamable_http",
-        "timeout": timedelta(seconds=120),
-        "sse_read_timeout": timedelta(seconds=600),
-    }
-}
-
-app = FastAPI(title="Claim Segmentation Agent")
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-
-class State(TypedDict):
-    messages: Annotated[list, add_messages]
-
-
-def router(state: State):
-    last = state["messages"][-1]
-    if isinstance(last, AIMessage) and getattr(last, "tool_calls", None):
-        return "tools"
-    if isinstance(last, AIMessage) and last.content:
-        if "Continue" in last.content:
-            return "tools"
-        if "End" in last.content:
-            return "End"
-    return "End"
-
-
-_FALLBACK_PROMPT = """
-You are the Claim Segmentation Agent for an insurance claims platform.
-Your job is to tell policyholders which processing track their claim has
-been routed to and what that means for them.
-
-─── STEP 0 — Determine whether a tool call is needed ───────────────────────
-Only call tools when the policyholder is asking about the STP status or
-processing track for a SPECIFIC claim.
-
-If the message is a general question (e.g. "What does Fast Track mean?",
-"How does this work?", "What are the categories?") — answer it from your
-knowledge WITHOUT calling any tools, then end with "End".
-
-─── STEP 1 — Extract the claim number ──────────────────────────────────────
-Before calling any tool, identify the claim number from the CURRENT message
-only. Do NOT use claim numbers from earlier in the conversation.
-
-If no claim number is present in the current message, ask:
-  "Could you please share your claim number so I can look up the details?"
-Do not call any tool until the policyholder provides it.
-
-─── STEP 2 — Check for an existing result ──────────────────────────────────
-Call get_stp_classification with the claim number.
-- If a result already exists, use it directly — do NOT call compute_stp_score.
-- If no result exists, call compute_stp_score to generate and save one.
-
-─── STEP 3 — Explain the result in plain language ──────────────────────────
-Tell the policyholder ONLY:
-- Which processing track their claim is on.
-- What that means in plain, friendly language:
-    "Full STP"      — Fastest path. Your claim meets all criteria for
-                      automated processing with minimal manual review.
-    "Fast Track"    — Expedited handling. A light review will be done
-                      before the claim moves forward.
-    "Vendor STP"    — A specialist or repair vendor will be engaged to
-                      help assess and process your claim.
-    "Manual Review" — An adjuster will review your claim manually.
-                      This may take a little longer than automated tracks.
-- Any recommended next steps.
-
-─── RULES ───────────────────────────────────────────────────────────────────
-- NEVER show numeric scores (stp_score, readiness, vis, etc.) to the
-  policyholder. Those are internal only.
-- NEVER mention fraud_ambiguity, subrogation, or other internal factors by
-  name. Translate them into plain language if relevant.
-- NEVER assume or guess a claim number. Always take it from the current message.
-- When you have completed the full response, end with "End".
-"""
-
-
-def load_prompt() -> str:
-    if not PHOENIX_ENDPOINT:
-        raise RuntimeError("Phoenix not configured")
-    from phoenix.client import Client
-    client = Client(base_url=PHOENIX_ENDPOINT, api_key=PHOENIX_API_KEY)
-    prompt = client.prompts.get(name="claim_segmentation_agent", label="production")
-    prompt_set = prompt._template["messages"]
-    system_msg = next(
-        (item["content"][0]["text"] for item in prompt_set if item.get("role") == "system"),
-        None,
-    )
-    if not system_msg:
-        raise ValueError("System prompt is empty or missing in Phoenix")
-    return system_msg
-
-
-def create_graph(model, tools, prompt):
-    graph_builder = StateGraph(State)
-    llm_with_tools = model.bind_tools(tools)
-
-    async def agent_node(state: State):
-        messages = state["messages"]
-        all_messages = [SystemMessage(content=prompt)] + messages
-        message = await llm_with_tools.ainvoke(all_messages)
-        return {"messages": [message]}
-
-    graph_builder.add_node("agent", agent_node)
-    graph_builder.add_node("tools", ToolNode(tools=tools))
-    graph_builder.add_edge(START, "agent")
-    graph_builder.add_conditional_edges("agent", router, {"tools": "tools", "End": END})
-    graph_builder.add_edge("tools", "agent")
-    return graph_builder.compile()
-
-
-async def get_tools():
-    client = MultiServerMCPClient(config_mcp_server)
-    tools = await client.get_tools()
-    logger.info("Tools loaded from MCP: %s", [t.name for t in tools])
-    return tools
-
-
-async def stream_graph(graph, initial_state, config):
-    async for event in graph.astream_events(initial_state, config=config, version="v2"):
-        kind = event.get("event", "")
-
-        if kind == "on_chat_model_stream":
-            chunk = event["data"].get("chunk")
-            if chunk and hasattr(chunk, "content") and chunk.content:
-                yield f"data: {chunk.content}\n\n"
-
-        elif kind == "on_tool_start":
-            tool_name = event.get("name", "unknown_tool")
-            yield f"data: [Tool: {tool_name}] Starting...\n\n"
-
-        elif kind == "on_tool_end":
-            tool_name = event.get("name", "unknown_tool")
-            yield f"data: [Tool: {tool_name}] Done\n\n"
-
-
-@app.post("/chat")
-async def chat_stream(request: Request):
-    load_dotenv(find_dotenv())
-
-    tools = await get_tools()
-
-    model = AzureChatOpenAI(
-        api_key=os.getenv("AZURE_OPENAI_API_KEY"),
-        api_version=os.getenv("AZURE_OPENAI_API_VERSION"),
-        azure_deployment=os.getenv("AZURE_OPENAI_CHAT_DEPLOYMENT"),
-        azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
-    )
-
-    try:
-        system_prompt = load_prompt()
-    except Exception as e:
-        logger.warning("Phoenix prompt load failed (%s) — using fallback prompt", e)
-        system_prompt = _FALLBACK_PROMPT
-
-    body = await request.json()
-    user_message = body.get("message", "Segment my claim")
-
-    graph = create_graph(model=model, tools=tools, prompt=system_prompt)
-
-    async def generate():
-        start = time.time()
-        last_event_at = start
-        last_tool = None
-        try:
-            async for event in stream_graph(
-                graph=graph,
-                initial_state={"messages": [user_message]},
-                config={"recursion_limit": 250},
-            ):
-                last_event_at = time.time()
-                if isinstance(event, str) and event.startswith("data: [Tool:"):
-                    try:
-                        last_tool = event.split("[Tool:", 1)[1].split("]", 1)[0]
-                    except Exception:
-                        pass
-                yield event
-        except BaseException as e:
-            elapsed = time.time() - start
-            since_last = time.time() - last_event_at
-            err = {
-                "exception_class": type(e).__name__,
-                "message": str(e),
-                "elapsed_total_seconds": round(elapsed, 2),
-                "seconds_since_last_event": round(since_last, 2),
-                "last_tool_invoked": last_tool,
-                "traceback": traceback.format_exc(),
-                "timestamp_utc": datetime.utcnow().isoformat(),
-            }
-            logger.error("AGENT_ERROR %s", json.dumps(err, default=str))
-            try:
-                yield f"data: [AGENT_ERROR] {json.dumps(err, default=str)}\n\n"
-            except Exception:
-                pass
-            import asyncio
-            if isinstance(e, asyncio.CancelledError):
-                raise
-
-    return StreamingResponse(generate(), media_type="text/event-stream")
-
-
-@app.get("/health")
-async def health():
-    return {"status": "healthy", "agent": "claim_segmentation_agent"}
-
-
-if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=AGENT_PORT)
+Musaddique Lalkot
+0 minutes 9 seconds0:09
+Musaddique Lalkot 0 minutes 9 seconds
+Insurance claims today continue to face challenges throughout the claims lifecycle, including lengthy first notice of loss processes, manual data collection, inconsistent claim information, delayed investigations, and limited customer visibility into claim progress.
+Musaddique Lalkot 0 minutes 25 seconds
+Hexaware's Agentic AI claims solution transforms this experience by introducing intelligent AI agents across the entire claims journey, enabling faster claim reporting, AI-assisted data capture, intelligent validation, real-time claim tracking, and seamless collaboration between the policyholder, adjuster, and SIU investigator.
+Musaddique Lalkot 0 minutes 45 seconds
+In this demonstration, we will focus on the policyholder interactive claim journey.
+Musaddique Lalkot 0 minutes 51 seconds
+The journey begins with the policyholder entering the policy number and clicking the lookup button. The system verifies the policy in real time against Guidewire.
+Musaddique Lalkot 1 minute 2 seconds
+Once the policy is verified, the policyholder simply describes the incident using either voice or text. The customer reports.
+Musaddique Lalkot 1 minute 11 seconds
+A fire incident occurred today at around 4 pm while I was at home. The fire started in the kitchen and caused damage to the flooring and cabinets.
+Musaddique Lalkot 1 minute 21 seconds
+Before submitting the claim, the policyholder also enters the estimated damage amount and clicks Chat with AI. The voice-to-text intake agent processes the narration, while the duplicate claim check agent verifies whether a similar claim has already been reported. The AI identifies any mandatory information that is still missing and asks contextual follow-up questions.
+Musaddique Lalkot 1 minute 42 seconds
+After the policyholder answers all the required questions, the voice-to-text intake agent captures the complete information and generates a structured summary for review, ensuring all mandatory claim details have been collected before submission. The policyholder can then upload supporting evidence by adding photographs and documents related to the damage. As we scroll down,
+Musaddique Lalkot 2 minutes 3 seconds
+We can see the policy information in your Policy Information section.
+Musaddique Lalkot 2 minutes 8 seconds
+Below that, the AI displays all the information it has extracted from the policyholder's description. Each field clearly indicates whether the value was extracted directly from the customer description or inferred by AI. This being a human review process policyholder can edit any AI generated information. An overall AI agent confidence score is also presented.
+Musaddique Lalkot 2 minutes 30 seconds
+Once the policyholder clicks Review and Confirm Fields, the data is updated.
+Musaddique Lalkot 2 minutes 36 seconds
+Finally, the policyholder clicks Confirm and Submit, after which the claim is successfully created and a unique claim number is generated.
+Musaddique Lalkot 2 minutes 46 seconds
+Now, navigating to Guidewire Claim Center
+Musaddique Lalkot 2 minutes 49 seconds
+And searching that particular claim under search section, claim related information gets visible.
+Musaddique Lalkot 2 minutes 56 seconds
+Such as policy number, insured name, adjuster.
+Musaddique Lalkot 3 minutes
+Clicking on that particular claim number, navigates to the summary page. Where additional data is visible, such as parties involved. Planned activities. The Status section, provides some data related to status of that claim. General policy information data is seen under Policy section.
+Musaddique Lalkot 3 minutes 20 seconds
+which has data related to insured, policy coverages, and more. Navigating to My Claims section.
+Musaddique Lalkot 3 minutes 29 seconds
+Claims summary is available.
+Musaddique Lalkot 3 minutes 32 seconds
+Under the Follow My Claims section, the policyholder can search for a specific claim and view the complete claim journey. This includes the claim readiness score, claim progress tracker, coverage status, and the current stage of claim processing.
+Musaddique Lalkot 3 minutes 47 seconds
+The policyholder can also view the latest stage updates, such as claim intake validation, giving complete visibility into where the claim currently stands. If needed, the policyholder can submit feedback, which is processed by the feedback agent, or raise concerns and communicate directly through the communication agent for additional assistance.
+Musaddique Lalkot 4 minutes 8 seconds
+The portal also provides the latest claim updates, estimated processing timeline, and a document-sharing section where additional supporting documents can be uploaded whenever required. Any communication initiated by the policyholder is automatically recorded within the latest updates section, ensuring complete traceability.
+Musaddique Lalkot 4 minutes 27 seconds
+Under the Document Hub, the policyholder can access and view all previously uploaded documents and evidence associated with the claim. From this point onward, the claim continues through the Intelligent Adjuster and SIU workflows, where AI-assisted assessment, fraud detection, and decision support accelerate claim handling while maintaining appropriate human oversight.
+Musaddique Lalkot 4 minutes 48 seconds
+With Hexaware's Agentic AI claims solution, policyholders experience a faster, more intelligent, and transparent claims journey.
+
+Musaddique Lalkot stopped transcrip
