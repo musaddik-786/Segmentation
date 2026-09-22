@@ -1,28 +1,14 @@
-from pathlib import Path
-from pypdf import PdfReader
+from loaders import load_pdf
 
 
-def load_pdf(file_path: str) -> list[dict]:
-    """
-    Extract text from a treaty PDF page by page.
-    """
+PDF_PATH = r"/mnt/data/cedera-data/treaties/TRT-2026-003_Property_Catastrophe_XoL.pdf"
 
-    path = Path(file_path)
 
-    if not path.exists():
-        raise FileNotFoundError(f"PDF not found: {file_path}")
+documents = load_pdf(PDF_PATH)
 
-    reader = PdfReader(str(path))
+print(f"Pages: {len(documents)}")
 
-    documents = []
-
-    for page_number, page in enumerate(reader.pages, start=1):
-        text = page.extract_text() or ""
-
-        documents.append({
-            "source": path.name,
-            "page_number": page_number,
-            "text": text.strip()
-        })
-
-    return documents
+for document in documents[:3]:
+    print("\n" + "=" * 80)
+    print(f"Page: {document['page_number']}")
+    print(document["text"][:1000])
