@@ -1,0 +1,1398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jarvis Full-Flow Tester</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:        #0b0d14;
+    --surface:   #13161f;
+    --card:      #1a1d2a;
+    --border:    #252836;
+    --border2:   #2e3247;
+    --accent:    #5b52f5;
+    --accent-dim:#3d37b0;
+    --accent-glow: rgba(91,82,245,.15);
+    --green:     #22c55e;
+    --green-bg:  rgba(34,197,94,.12);
+    --amber:     #f59e0b;
+    --amber-bg:  rgba(245,158,11,.12);
+    --red:       #ef4444;
+    --red-bg:    rgba(239,68,68,.12);
+    --blue:      #60a5fa;
+    --blue-bg:   rgba(96,165,250,.12);
+    --txt:       #e2e6f0;
+    --txt2:      #8b95a8;
+    --txt3:      #4e566a;
+    --phase0:    #a78bfa;
+    --phase1:    #60a5fa;
+    --phase3:    #34d399;
+    --phase4:    #f472b6;
+    --phase5:    #fb923c;
+    --phase6:    #a78bfa;
+  }
+
+  html, body { height: 100%; }
+  body {
+    font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+    font-size: 13px;
+    background: var(--bg);
+    color: var(--txt);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ── Header ── */
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 16px;
+    height: 52px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-shrink: 0;
+    overflow-x: auto;
+  }
+
+  .brand { font-size: 14px; font-weight: 700; color: var(--phase0); white-space: nowrap; letter-spacing: -.01em; }
+
+  .lob-toggle { display: flex; gap: 3px; background: var(--bg); border-radius: 7px; padding: 3px; }
+  .lob-btn {
+    padding: 4px 13px; border: none; border-radius: 5px; cursor: pointer;
+    font-size: 12px; font-weight: 600; background: transparent; color: var(--txt2);
+    transition: all .15s; white-space: nowrap;
+  }
+  .lob-btn.active { background: var(--accent); color: #fff; }
+
+  .phase-bar { display: flex; align-items: center; gap: 0; }
+  .phase-pill {
+    padding: 3px 10px; font-size: 11px; font-weight: 600; border-radius: 20px;
+    background: var(--card); color: var(--txt3); border: 1px solid var(--border);
+    white-space: nowrap; transition: all .2s;
+  }
+  .phase-pill.done  { background: var(--green-bg); color: var(--green); border-color: var(--green); }
+  .phase-pill.active { background: var(--accent-glow); color: var(--accent); border-color: var(--accent); }
+  .phase-sep { color: var(--txt3); font-size: 11px; padding: 0 4px; }
+
+  .url-group { display: flex; align-items: center; gap: 6px; margin-left: auto; }
+  .url-group label { font-size: 11px; color: var(--txt3); white-space: nowrap; }
+  .url-group input {
+    background: var(--bg); border: 1px solid var(--border2); color: var(--txt);
+    border-radius: 5px; padding: 3px 8px; font-size: 12px; width: 148px;
+  }
+  .url-group input:focus { outline: 1px solid var(--accent); }
+
+  /* ── Main layout ── */
+  .main { display: flex; flex: 1; overflow: hidden; gap: 0; }
+
+  /* ── Shared panel styles ── */
+  .panel { display: flex; flex-direction: column; border-right: 1px solid var(--border); overflow: hidden; }
+  .panel:last-child { border-right: none; }
+
+  .panel-head {
+    padding: 10px 14px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .panel-title {
+    font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--txt2);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .phase-tag {
+    font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 10px;
+    text-transform: uppercase; letter-spacing: .04em;
+  }
+  .tag-0  { background: rgba(167,139,250,.15); color: var(--phase0); }
+  .tag-12 { background: rgba(96,165,250,.15);  color: var(--phase1); }
+  .tag-3  { background: rgba(52,211,153,.15);  color: var(--phase3); }
+  .tag-4  { background: rgba(244,114,182,.15); color: var(--phase4); }
+
+  /* ── Left panel — Policy ── */
+  .policy-panel { width: 260px; flex-shrink: 0; background: var(--surface); }
+  .policy-body  { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+
+  .field-input {
+    width: 100%; background: var(--bg); border: 1px solid var(--border2); color: var(--txt);
+    border-radius: 6px; padding: 6px 10px; font-size: 13px; font-family: inherit;
+  }
+  .field-input:focus { outline: 1px solid var(--accent); }
+
+  .btn-row { display: flex; gap: 6px; }
+  .btn {
+    flex: 1; padding: 7px 0; border: none; border-radius: 6px; cursor: pointer;
+    font-size: 12px; font-weight: 600; transition: all .15s;
+  }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: var(--accent-dim); }
+  .btn-secondary { background: var(--card); color: var(--txt2); border: 1px solid var(--border2); }
+  .btn-secondary:hover { color: var(--txt); border-color: var(--accent); }
+  .btn:disabled { opacity: .4; cursor: not-allowed; }
+
+  .policy-details {
+    background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px; display: flex; flex-direction: column; gap: 0;
+  }
+  .policy-empty { color: var(--txt3); font-size: 12px; text-align: center; padding: 20px 0; }
+
+  .kv { display: flex; justify-content: space-between; align-items: flex-start; padding: 5px 0; border-bottom: 1px solid var(--border); gap: 6px; }
+  .kv:last-child { border-bottom: none; padding-bottom: 0; }
+  .kv-label { font-size: 11px; color: var(--txt2); flex-shrink: 0; }
+  .kv-value { font-size: 11px; color: var(--txt); text-align: right; word-break: break-word; }
+  .kv-value.null { color: var(--txt3); }
+
+  .badge {
+    display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 10px;
+    font-size: 10px; font-weight: 700;
+  }
+  .badge-active    { background: var(--green-bg); color: var(--green); }
+  .badge-draft     { background: var(--blue-bg);  color: var(--blue); }
+  .badge-submitted { background: var(--green-bg); color: var(--green); }
+  .badge-pending   { background: var(--amber-bg); color: var(--amber); }
+  .badge-covered   { background: var(--green-bg); color: var(--green); }
+  .badge-partial   { background: var(--amber-bg); color: var(--amber); }
+  .badge-not       { background: var(--red-bg);   color: var(--red); }
+  .badge-invest    { background: var(--amber-bg); color: var(--amber); }
+  .badge-unknown   { background: var(--card);     color: var(--txt2); }
+
+  .section-label {
+    font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em;
+    color: var(--txt3); padding: 6px 0 4px;
+  }
+
+  /* ── Center panel — Chat ── */
+  .chat-panel { flex: 1; min-width: 0; background: var(--bg); }
+  .messages { flex: 1; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 9px; }
+  .msg { max-width: 78%; padding: 9px 13px; border-radius: 11px; font-size: 13px; line-height: 1.6; word-break: break-word; }
+  .msg.user  { background: var(--accent); color: #fff; align-self: flex-end; border-bottom-right-radius: 3px; white-space: pre-wrap; }
+  .msg.agent { background: var(--card); color: var(--txt); align-self: flex-start; border-bottom-left-radius: 3px; white-space: normal; }
+  .msg.agent p { margin: 0 0 7px; }
+  .msg.agent p:last-child { margin-bottom: 0; }
+  .msg.agent ul, .msg.agent ol { padding-left: 18px; margin: 0 0 7px; }
+  .msg.agent li { margin-bottom: 3px; }
+  .msg.agent strong { color: var(--txt); font-weight: 700; }
+  .msg.agent em { color: var(--txt2); }
+  .msg.agent code { background: var(--bg); padding: 1px 5px; border-radius: 3px; font-size: 11px; font-family: monospace; color: var(--blue); }
+  .msg.agent h1, .msg.agent h2, .msg.agent h3 { margin: 8px 0 4px; font-size: 13px; font-weight: 700; color: var(--txt); }
+  .msg.agent.streaming { border-left: 2px solid var(--accent); }
+  .msg.system { background: rgba(52,211,153,.1); color: var(--phase3); font-size: 11px; align-self: center; padding: 3px 12px; border-radius: 20px; }
+  .msg.error  { background: var(--red-bg); color: var(--red); font-size: 12px; align-self: center; padding: 6px 13px; border-radius: 8px; }
+
+  .chat-input { border-top: 1px solid var(--border); padding: 10px 12px; display: flex; gap: 8px; flex-shrink: 0; }
+  .chat-input textarea {
+    flex: 1; background: var(--card); border: 1px solid var(--border2); color: var(--txt);
+    border-radius: 7px; padding: 7px 11px; font-size: 13px; resize: none; font-family: inherit; line-height: 1.4;
+  }
+  .chat-input textarea:focus { outline: 1px solid var(--accent); }
+  .send-btn { background: var(--accent); color: #fff; border: none; border-radius: 7px; padding: 0 16px; cursor: pointer; font-size: 13px; font-weight: 600; }
+  .send-btn:disabled { background: var(--border2); color: var(--txt3); cursor: not-allowed; }
+  .reset-btn { background: var(--card); color: var(--txt2); border: 1px solid var(--border2); border-radius: 7px; padding: 0 12px; cursor: pointer; font-size: 12px; }
+  .reset-btn:hover { color: var(--txt); }
+
+  /* ── Right panel — FNOL + Coverage ── */
+  .right-panel { width: 310px; flex-shrink: 0; background: var(--surface); display: flex; flex-direction: column; }
+
+  .right-section { display: flex; flex-direction: column; border-bottom: 1px solid var(--border); }
+  .right-section:last-child { border-bottom: none; flex: 1; }
+
+  .right-section-head {
+    padding: 9px 12px; display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid var(--border); cursor: pointer; user-select: none;
+  }
+  .right-section-body { flex: 1; overflow-y: auto; padding: 10px 12px; }
+
+  .fnol-scroll { overflow-y: auto; }
+  .fnol-id-badge { font-size: 11px; color: var(--txt3); margin-bottom: 8px; }
+
+  .action-row { padding: 10px 12px; border-top: 1px solid var(--border); }
+  .action-btn {
+    width: 100%; padding: 9px; border: none; border-radius: 7px; cursor: pointer;
+    font-size: 13px; font-weight: 600; transition: all .15s; margin-bottom: 6px;
+  }
+  .action-btn:last-child { margin-bottom: 0; }
+  .submit-btn { background: #059669; color: #fff; }
+  .submit-btn:hover:not(:disabled) { background: #047857; }
+  .submit-btn:disabled { background: var(--card); color: var(--txt3); cursor: not-allowed; }
+  .verify-btn { background: var(--phase4); color: #fff; }
+  .verify-btn:hover:not(:disabled) { background: #db2777; }
+  .verify-btn:disabled { background: var(--card); color: var(--txt3); cursor: not-allowed; }
+
+  .coverage-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px; margin-bottom: 8px;
+  }
+  .coverage-verdict-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .coverage-notes { font-size: 11px; color: var(--txt2); line-height: 1.5; margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--border); }
+
+  .icon-btn { background: none; border: 1px solid var(--border); color: var(--txt3); border-radius: 5px; padding: 2px 9px; font-size: 11px; cursor: pointer; }
+  .icon-btn:hover { color: var(--txt); border-color: var(--accent); }
+
+  /* collapse toggle */
+  .collapse-toggle { font-size: 11px; color: var(--txt3); }
+
+  /* amount display */
+  .amount { font-size: 16px; font-weight: 700; color: var(--txt); font-variant-numeric: tabular-nums; }
+  .amount-label { font-size: 10px; color: var(--txt3); text-transform: uppercase; letter-spacing: .06em; }
+
+  .amounts-row { display: flex; gap: 10px; margin: 6px 0; }
+  .amount-tile { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 7px 10px; flex: 1; text-align: center; }
+
+  /* spinner */
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spin { display: inline-block; width: 12px; height: 12px; border: 2px solid var(--border2); border-top-color: var(--accent); border-radius: 50%; animation: spin .6s linear infinite; vertical-align: middle; margin-right: 5px; }
+
+  /* phase 5 */
+  .tag-5  { background: rgba(251,146,60,.15); color: var(--phase5); }
+  /* phase 6 */
+  .tag-6  { background: rgba(167,139,250,.15); color: var(--phase6); }
+  .seg-badge { display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700; }
+  .seg-full-stp   { background:rgba(34,197,94,.15);  color:var(--green); }
+  .seg-fast-track { background:rgba(96,165,250,.15);  color:var(--blue); }
+  .seg-vendor-stp { background:rgba(245,158,11,.15);  color:var(--amber); }
+  .seg-manual     { background:rgba(239,68,68,.15);   color:var(--red); }
+
+  /* chat tabs */
+  .tab-bar { display: flex; gap: 0; border-bottom: 1px solid var(--border); flex-shrink: 0; background: var(--surface); }
+  .tab-btn {
+    padding: 8px 14px; font-size: 11px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: .06em;
+    border: none; background: transparent; color: var(--txt3); cursor: pointer;
+    border-bottom: 2px solid transparent; transition: all .15s; white-space: nowrap;
+  }
+  .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); background: var(--bg); }
+  .tab-btn:hover:not(.active) { color: var(--txt); }
+
+  /* claim readiness score bar */
+  .score-bar-bg { background: var(--bg); border-radius: 4px; height: 7px; overflow: hidden; margin: 3px 0 6px; }
+  .score-bar-fill { height: 100%; border-radius: 4px; transition: width .4s ease; }
+
+  /* motor checklist */
+  .check-item { display: flex; align-items: center; gap: 7px; padding: 3px 0; }
+  .check-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .check-dot.ok   { background: var(--green); }
+  .check-dot.miss { background: var(--red); }
+</style>
+</head>
+<body>
+
+<header>
+  <span class="brand">Jarvis Agent Tester</span>
+
+  <div class="lob-toggle">
+    <button class="lob-btn active" onclick="setLob('Homeowners')">Homeowners</button>
+    <button class="lob-btn" onclick="setLob('Motor')">Motor</button>
+  </div>
+
+  <div class="phase-bar">
+    <span class="phase-pill" id="ph0">0 · Policy</span>
+    <span class="phase-sep">→</span>
+    <span class="phase-pill" id="ph12">1-2 · FNOL</span>
+    <span class="phase-sep">→</span>
+    <span class="phase-pill" id="ph3">3 · Submit</span>
+    <span class="phase-sep">→</span>
+    <span class="phase-pill" id="ph4">4 · Coverage</span>
+    <span class="phase-sep">→</span>
+    <span class="phase-pill" id="ph5">5 · Readiness</span>
+    <span class="phase-sep">→</span>
+    <span class="phase-pill" id="ph6">6 · Segmentation</span>
+  </div>
+
+  <div class="url-group">
+    <label>Agent</label>
+    <input id="agentUrl" value="http://localhost:7701" />
+    <label>MCP</label>
+    <input id="mcpUrl" value="http://localhost:7720" />
+  </div>
+</header>
+
+<div class="main">
+
+  <!-- LEFT: Phase 0 — Policy Lookup -->
+  <div class="panel policy-panel">
+    <div class="panel-head">
+      <span class="panel-title">
+        <span class="phase-tag tag-0">Phase 0</span>
+        Policy Lookup
+      </span>
+      <button class="icon-btn" id="clearPolicyBtn" onclick="clearPolicy()">Clear</button>
+    </div>
+    <div class="policy-body" id="policyBody">
+      <div>
+        <div class="section-label">Policy Number</div>
+        <input class="field-input" id="policyInput" placeholder="e.g. POL-1003 or 5581177897" />
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-secondary" onclick="searchPolicy()">Search</button>
+        <button class="btn btn-primary"   onclick="savePolicy()">Save to DB</button>
+      </div>
+
+      <div id="policyStatusMsg" style="font-size:11px;color:var(--txt3);min-height:16px;"></div>
+
+      <div class="section-label">Policy Details</div>
+      <div class="policy-details" id="policyDetails">
+        <div class="policy-empty">No policy loaded yet</div>
+      </div>
+
+      <div id="policyErrorBox" style="display:none; background:var(--red-bg); color:var(--red); border-radius:6px; padding:8px 10px; font-size:12px;"></div>
+    </div>
+  </div>
+
+  <!-- CENTER: Phase 1–2 — FNOL Chat / Phase 5 — Claim Readiness Agent -->
+  <div class="panel chat-panel">
+    <div class="panel-head">
+      <span class="panel-title" id="chatPanelTitle">
+        <span class="phase-tag tag-12" id="chatPanelTag">Phase 1-2</span>
+        <span id="chatPanelLabel">FNOL Intake</span>
+      </span>
+    </div>
+    <div class="tab-bar">
+      <button class="tab-btn active" id="tab-fnol" onclick="switchChatTab('fnol')">FNOL Intake</button>
+      <button class="tab-btn" id="tab-cr" onclick="switchChatTab('cr')">Claim Readiness Agent</button>
+    </div>
+    <!-- FNOL messages -->
+    <div class="messages" id="messages">
+      <div class="msg system">Select LOB → look up policy → then start FNOL intake here.</div>
+    </div>
+    <!-- Claim Readiness Agent messages -->
+    <div class="messages" id="crMessages" style="display:none;">
+      <div class="msg system">Score claim readiness (Phase 5), then chat with the agent here.</div>
+    </div>
+    <!-- FNOL chat input -->
+    <div class="chat-input" id="chatInputFnol">
+      <textarea id="msgInput" rows="2" placeholder="Type your message… (Enter to send, Shift+Enter for newline)"></textarea>
+      <button class="reset-btn" onclick="resetChat()">Reset</button>
+      <button class="send-btn" id="sendBtn" onclick="sendMessage()">Send</button>
+    </div>
+    <!-- Claim Readiness Agent chat input -->
+    <div class="chat-input" id="chatInputCr" style="display:none;">
+      <textarea id="crMsgInput" rows="2" placeholder="Ask about claim readiness… (Enter to send, Shift+Enter for newline)"></textarea>
+      <button class="reset-btn" onclick="resetCrChat()">Reset</button>
+      <button class="send-btn" id="crSendBtn" onclick="sendCrMessage()">Send</button>
+    </div>
+  </div>
+
+  <!-- RIGHT: FNOL Record + Coverage -->
+  <div class="right-panel">
+
+    <!-- Phase 3 — FNOL Record + Submit -->
+    <div class="right-section" style="flex:1; min-height:0;">
+      <div class="right-section-head">
+        <span class="panel-title">
+          <span class="phase-tag tag-3">Phase 3</span>
+          FNOL Record
+        </span>
+        <button class="icon-btn" onclick="refreshFnol()">Refresh</button>
+      </div>
+      <div class="right-section-body fnol-scroll" id="fnolBody">
+        <div class="policy-empty">No FNOL created yet</div>
+      </div>
+      <div class="action-row">
+        <!-- Manual FNOL discovery (fallback when auto-detect fails) -->
+        <div style="display:flex;gap:6px;margin-bottom:8px;">
+          <input id="fnolPolicyInput" class="field-input" style="flex:1;font-size:12px;padding:5px 8px;" placeholder="Policy # to find FNOL" />
+          <button class="btn btn-secondary" style="flex-shrink:0;padding:0 10px;font-size:11px;" onclick="findFnolManual()">Find</button>
+          <button class="btn btn-secondary" style="flex-shrink:0;padding:0 10px;font-size:11px;color:var(--red);" onclick="cleanupDrafts()">Clear Drafts</button>
+        </div>
+        <button class="action-btn submit-btn" id="submitFnolBtn" disabled onclick="submitFnol()">Submit FNOL</button>
+      </div>
+    </div>
+
+    <!-- Phase 4 — Coverage Verification -->
+    <div class="right-section" style="flex-shrink:0;">
+      <div class="right-section-head">
+        <span class="panel-title">
+          <span class="phase-tag tag-4">Phase 4</span>
+          Coverage Verification
+        </span>
+        <button class="icon-btn" onclick="getCoverageResult()">Refresh</button>
+      </div>
+      <div class="right-section-body" id="coverageBody">
+        <div class="policy-empty">Submit FNOL first to verify coverage</div>
+      </div>
+      <div class="action-row">
+        <!-- Manual claim number input fallback -->
+        <div id="claimNumberDisplay" style="display:none;font-size:11px;color:var(--green);margin-bottom:6px;font-weight:600;"></div>
+        <div style="display:flex;gap:6px;margin-bottom:8px;">
+          <input id="manualClaimInput" class="field-input" style="flex:1;font-size:12px;padding:5px 8px;" placeholder="Claim # (e.g. CLM--023)" />
+          <button class="btn btn-secondary" style="flex-shrink:0;padding:0 10px;font-size:11px;" onclick="setManualClaim()">Use</button>
+        </div>
+        <button class="action-btn verify-btn" id="verifyCoverageBtn" disabled onclick="verifyCoverage()">Verify Coverage</button>
+      </div>
+    </div>
+
+    <!-- Phase 5 — Claim Readiness -->
+    <div class="right-section" style="flex-shrink:0;">
+      <div class="right-section-head">
+        <span class="panel-title">
+          <span class="phase-tag tag-5">Phase 5</span>
+          Claim Readiness
+        </span>
+        <button class="icon-btn" onclick="getCrResult()">Refresh</button>
+      </div>
+      <div class="right-section-body" id="crBody" style="max-height:230px;">
+        <div class="policy-empty">Score readiness after coverage verification</div>
+      </div>
+      <!-- Document upload sub-section -->
+      <div style="padding:8px 12px;border-top:1px solid var(--border);border-bottom:1px solid var(--border);background:var(--bg);">
+        <div class="section-label" style="padding-bottom:5px;">Upload Evidence Document</div>
+        <div style="display:flex;gap:6px;margin-bottom:6px;">
+          <select id="docTypeSelect" class="field-input" style="flex:1;font-size:11px;padding:4px 6px;">
+            <option value="">Auto-detect type</option>
+            <optgroup label="Homeowners">
+              <option value="Image">Photo / Image</option>
+            </optgroup>
+            <optgroup label="Motor">
+              <option value="Damage Photo">Damage Photo</option>
+              <option value="Dashcam Video">Dashcam Video</option>
+              <option value="Police FIR">Police FIR</option>
+              <option value="Driving License">Driving License</option>
+              <option value="RC Book">RC Book / Vehicle Registration</option>
+            </optgroup>
+          </select>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <input type="file" id="docFileInput" style="flex:1;font-size:11px;color:var(--txt2);background:var(--card);border:1px solid var(--border2);border-radius:5px;padding:3px 6px;" />
+          <button class="btn btn-secondary" style="flex-shrink:0;padding:0 10px;font-size:11px;" id="uploadDocBtn" onclick="uploadDoc()">Upload</button>
+        </div>
+        <div id="uploadDocStatus" style="font-size:11px;color:var(--txt3);min-height:14px;margin-top:4px;"></div>
+        <!-- Uploaded docs list -->
+        <div id="docsList" style="margin-top:6px;"></div>
+      </div>
+      <div class="action-row">
+        <div id="crClaimDisplay" style="display:none;font-size:11px;color:var(--green);margin-bottom:6px;font-weight:600;"></div>
+        <button class="action-btn" id="scoreCrBtn" style="background:var(--phase5);color:#fff;margin-bottom:6px;" disabled onclick="scoreCr()">Score Claim Readiness</button>
+        <button class="action-btn" id="ackDocsBtn" style="background:var(--card);color:var(--amber);border:1px solid var(--amber);display:none;" onclick="ackDocs()">Acknowledge Missing Docs</button>
+      </div>
+    </div>
+
+    <!-- Phase 6 — Segmentation / STP -->
+    <div class="right-section" style="flex-shrink:0;">
+      <div class="right-section-head">
+        <span class="panel-title">
+          <span class="phase-tag tag-6">Phase 6</span>
+          Claim Segmentation
+        </span>
+        <button class="icon-btn" onclick="getSegResult()">Refresh</button>
+      </div>
+      <div class="right-section-body" id="segBody" style="max-height:200px;">
+        <div class="policy-empty">Compute segmentation after readiness scoring</div>
+      </div>
+      <div class="action-row">
+        <button class="action-btn" id="computeSegBtn" style="background:var(--phase6);color:#fff;" disabled onclick="computeSegmentation()">Compute STP Segmentation</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  // ── State ──────────────────────────────────────────────────────────────────
+  let lob       = 'Homeowners';
+  let history   = [];
+  let crHistory = [];
+  let fnolId    = null;
+  let claimNumber = null;
+  let streaming = false;
+  let crStreaming = false;
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
+  const agentUrl = () => document.getElementById('agentUrl').value.replace(/\/$/, '');
+  const mcpUrl   = () => document.getElementById('mcpUrl').value.replace(/\/$/, '');
+
+  function setPhase(phase) {
+    // phase: 0 | 12 | 3 | 4 | 5 | 6
+    const ids = { 0: 'ph0', 12: 'ph12', 3: 'ph3', 4: 'ph4', 5: 'ph5', 6: 'ph6' };
+    const order = [0, 12, 3, 4, 5, 6];
+    const idx = order.indexOf(phase);
+    order.forEach((p, i) => {
+      const el = document.getElementById(ids[p]);
+      el.className = 'phase-pill' + (i < idx ? ' done' : i === idx ? ' active' : '');
+    });
+  }
+
+  function addMsg(role, text) {
+    const el = document.createElement('div');
+    el.className = `msg ${role}`;
+    el.textContent = text;
+    const container = document.getElementById('messages');
+    container.appendChild(el);
+    container.scrollTop = container.scrollHeight;
+    return el;
+  }
+
+  function statusMsg(msg, color = 'var(--txt3)') {
+    const el = document.getElementById('policyStatusMsg');
+    el.style.color = color;
+    el.textContent = msg;
+  }
+
+  function showPolicyError(msg) {
+    const el = document.getElementById('policyErrorBox');
+    el.textContent = msg;
+    el.style.display = msg ? 'block' : 'none';
+  }
+
+  function verdictBadgeClass(verdict) {
+    if (!verdict) return 'badge-unknown';
+    const v = verdict.toLowerCase();
+    if (v.includes('not covered'))      return 'badge-not';
+    if (v.includes('partially'))        return 'badge-partial';
+    if (v.includes('needs'))            return 'badge-invest';
+    if (v.includes('covered'))          return 'badge-covered';
+    return 'badge-unknown';
+  }
+
+  function formatCurrency(val) {
+    if (val == null || val === '') return '—';
+    const n = parseFloat(val);
+    if (isNaN(n)) return String(val);
+    return '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  // ── LOB Toggle ─────────────────────────────────────────────────────────────
+  function setLob(val) {
+    lob = val;
+    document.querySelectorAll('.lob-btn').forEach(b => b.classList.toggle('active', b.textContent === val));
+    resetAll();
+    addMsg('system', `Switched to ${val} LOB — session reset`);
+  }
+
+  function resetAll() {
+    history = []; crHistory = []; fnolId = null; claimNumber = null;
+    document.getElementById('messages').innerHTML = '<div class="msg system">Session reset. Start a new FNOL intake.</div>';
+    document.getElementById('crMessages').innerHTML = '<div class="msg system">Score claim readiness in Phase 5, then chat with the agent here.</div>';
+    document.getElementById('fnolBody').innerHTML = '<div class="policy-empty">No FNOL created yet</div>';
+    document.getElementById('coverageBody').innerHTML = '<div class="policy-empty">Submit FNOL first to verify coverage</div>';
+    document.getElementById('crBody').innerHTML = '<div class="policy-empty">Score readiness after coverage verification</div>';
+    document.getElementById('submitFnolBtn').disabled = true;
+    document.getElementById('submitFnolBtn').textContent = 'Submit FNOL';
+    document.getElementById('verifyCoverageBtn').disabled = true;
+    document.getElementById('scoreCrBtn').disabled = true;
+    document.getElementById('ackDocsBtn').style.display = 'none';
+    document.getElementById('crClaimDisplay').style.display = 'none';
+    document.getElementById('docsList').innerHTML = '';
+    document.getElementById('uploadDocStatus').textContent = '';
+    document.getElementById('segBody').innerHTML = '<div class="policy-empty">Compute segmentation after readiness scoring</div>';
+    document.getElementById('computeSegBtn').disabled = true;
+    switchChatTab('fnol');
+    setPhase(0);
+  }
+
+  function resetChat() {
+    history = []; fnolId = null; claimNumber = null;
+    document.getElementById('messages').innerHTML = '<div class="msg system">Chat reset.</div>';
+    document.getElementById('fnolBody').innerHTML = '<div class="policy-empty">No FNOL created yet</div>';
+    document.getElementById('submitFnolBtn').disabled = true;
+    document.getElementById('submitFnolBtn').textContent = 'Submit FNOL';
+  }
+
+  // ── Phase 0: Policy Lookup ─────────────────────────────────────────────────
+  async function searchPolicy() {
+    const pn = document.getElementById('policyInput').value.trim();
+    if (!pn) { statusMsg('Enter a policy number first', 'var(--amber)'); return; }
+    statusMsg('Searching…'); showPolicyError('');
+    try {
+      const res = await fetch(`${mcpUrl()}/api/v1/policy_coverage/gw_search_policy`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ policy_number: pn, lob }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || JSON.stringify(data));
+      if (!data.found) {
+        statusMsg(data.error || 'Policy not found', 'var(--red)');
+        renderPolicy(null);
+        return;
+      }
+      statusMsg('Policy found ✓', 'var(--green)');
+      renderPolicy(data.policy);
+      setPhase(12);
+    } catch (e) {
+      statusMsg(''); showPolicyError(`Search error: ${e.message}`);
+    }
+  }
+
+  async function savePolicy() {
+    const pn = document.getElementById('policyInput').value.trim();
+    if (!pn) { statusMsg('Enter a policy number first', 'var(--amber)'); return; }
+    statusMsg('Saving to DB…'); showPolicyError('');
+    try {
+      const res = await fetch(`${mcpUrl()}/api/v1/policy_coverage/save_policy_details`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ policy_number: pn, lob }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || JSON.stringify(data));
+      if (data.error) { statusMsg(data.error, 'var(--red)'); renderPolicy(null); return; }
+      statusMsg('Saved to policy_details ✓', 'var(--green)');
+      const pol = data.policy || data;
+      renderPolicyRow(pol);
+      setPhase(12);
+      // Auto-discover any existing FNOL for this policy
+      setTimeout(() => discoverFnolByPolicy(pn), 300);
+    } catch (e) {
+      statusMsg(''); showPolicyError(`Save error: ${e.message}`);
+    }
+  }
+
+  function renderPolicy(p) {
+    if (!p) { document.getElementById('policyDetails').innerHTML = '<div class="policy-empty">No policy found</div>'; return; }
+    renderPolicyRow(p);
+  }
+
+  function renderPolicyRow(p) {
+    const statusCls = (p.status || '').toLowerCase() === 'active' ? 'badge-active' : 'badge-unknown';
+    const rows = [
+      ['Status',      p.status ? `<span class="badge ${statusCls}">${p.status}</span>` : '—'],
+      ['Name',        p.policyholder_name || p.insured_name || '—'],
+      ['Coverage',    p.coverage_type || p.product_name || '—'],
+      ['Limit',       formatCurrency(p.coverage_limit || p.remaining_coverage_limit)],
+      ['Deductible',  formatCurrency(p.deductible)],
+      ['Effective',   p.effective_date || '—'],
+      ['Expires',     p.expiration_date || '—'],
+      ['GW ID',       p.gw_policy_id || '—'],
+    ];
+    document.getElementById('policyDetails').innerHTML = rows.map(([k, v]) =>
+      `<div class="kv"><span class="kv-label">${k}</span><span class="kv-value">${v}</span></div>`
+    ).join('');
+  }
+
+  function clearPolicy() {
+    document.getElementById('policyInput').value = '';
+    document.getElementById('policyDetails').innerHTML = '<div class="policy-empty">No policy loaded yet</div>';
+    statusMsg(''); showPolicyError('');
+  }
+
+  // ── Phase 1-2: Chat ────────────────────────────────────────────────────────
+  async function sendMessage() {
+    if (streaming) return;
+    const input = document.getElementById('msgInput');
+    const text = input.value.trim();
+    if (!text) return;
+
+    input.value = '';
+    addMsg('user', text);
+    document.getElementById('sendBtn').disabled = true;
+    streaming = true;
+    setPhase(12);
+
+    const agentEl = addMsg('agent', '');
+    agentEl.classList.add('streaming');
+    let fullText = '';
+
+    try {
+      const resp = await fetch(`${agentUrl()}/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: text, lob, history, input_type: 'text' }),
+      });
+      if (!resp.ok) { const e = await resp.text(); throw new Error(`${resp.status}: ${e}`); }
+
+      const reader = resp.body.getReader();
+      const dec = new TextDecoder();
+      let buf = '';
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+        const lines = buf.split('\n');
+        buf = lines.pop();
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          // Keep raw with spaces intact — trimming strips leading spaces from tokens
+          // e.g. " The" becomes "The" and words run together
+          const raw = line.slice(6);
+          const rawTrimmed = raw.trim();
+          if (!rawTrimmed || rawTrimmed === '[DONE]') continue;
+          // Tool status lines go to console only — not into the chat bubble
+          if (rawTrimmed.startsWith('[Tool:') || rawTrimmed.startsWith('[AGENT_ERROR]')) {
+            console.log('[Agent]', rawTrimmed);
+            continue;
+          }
+          try {
+            const parsed = JSON.parse(rawTrimmed);
+            if (parsed !== null && typeof parsed === 'object') {
+              // JSON object from agent — extract the text field
+              const chunk = parsed.content ?? parsed.text ?? parsed.delta ?? '';
+              fullText += chunk;
+            } else {
+              // JSON.parse succeeded but returned a number/boolean/string primitive.
+              // This happens when the LLM streams bare numbers like "2026" or "7"
+              // which are valid JSON but are NOT structured payloads.
+              // Treat the raw SSE text as plain content so nothing gets dropped.
+              fullText += raw;
+            }
+          } catch {
+            // Not JSON at all — plain text token from the agent stream
+            fullText += raw;
+          }
+          agentEl.innerHTML = _renderMarkdown(fullText);
+          document.getElementById('messages').scrollTop = 99999;
+        }
+      }
+    } catch (e) {
+      agentEl.remove();
+      addMsg('error', `Error: ${e.message}`);
+    }
+
+    agentEl.classList.remove('streaming');
+    if (fullText) {
+      history.push({ role: 'user', content: text });
+      history.push({ role: 'assistant', content: fullText });
+      // Try to extract fnol_id and claim_number from agent text
+      _extractIdsFromText(fullText);
+    }
+    streaming = false;
+    document.getElementById('sendBtn').disabled = false;
+    setTimeout(refreshFnol, 800);
+  }
+
+  // Safe markdown-to-HTML renderer — NO external library.
+  // Deliberately does NOT interpret dates (2026-09-17), claim numbers (CLM-2026-XXXX),
+  // or any numeric sequences as markdown constructs.
+  function _renderMarkdown(text) {
+    // 1. Escape HTML entities to prevent XSS and misinterpretation
+    let s = text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+
+    // 2. Bold: **text** — only when surrounded by word chars or spaces, not digits-dashes
+    s = s.replace(/\*\*([^*\n]+?)\*\*/g, '<strong>$1</strong>');
+
+    // 3. Split into paragraphs on blank lines
+    const blocks = s.split(/\n{2,}/);
+    const rendered = blocks.map(block => {
+      const trimmed = block.trim();
+      if (!trimmed) return '';
+
+      // Detect bullet list block (lines starting with - or *)
+      const lines = trimmed.split('\n');
+      const isList = lines.every(l => /^\s*[-*]\s/.test(l) || l.trim() === '');
+      if (isList) {
+        const items = lines
+          .filter(l => /^\s*[-*]\s/.test(l))
+          .map(l => `<li>${l.replace(/^\s*[-*]\s/, '')}</li>`)
+          .join('');
+        return `<ul>${items}</ul>`;
+      }
+
+      // Regular paragraph — convert single newlines to <br>
+      return `<p>${lines.join('<br>')}</p>`;
+    });
+
+    return rendered.filter(Boolean).join('');
+  }
+
+  function _extractIdsFromText(text) {
+    // Extract claim number — strict format CLM-YYYY-NNNN only to avoid garbled matches
+    if (!claimNumber) {
+      const clmMatch = text.match(/\b(CLM[-–]\d{4}[-–]\d{3,6})\b/i);
+      if (clmMatch) {
+        claimNumber = clmMatch[1];
+        document.getElementById('verifyCoverageBtn').disabled = false;
+        document.getElementById('scoreCrBtn').disabled = false;
+        document.getElementById('computeSegBtn').disabled = false;
+        document.getElementById('claimNumberDisplay').textContent = claimNumber;
+        document.getElementById('claimNumberDisplay').style.display = 'block';
+        addMsg('system', `Claim # detected: ${claimNumber}`);
+        setPhase(4);
+      }
+    }
+    // Extract fnol_id from tool calls or text
+    if (!fnolId) {
+      const idMatch = text.match(/create_fnol_submission.*?(\d+)/i)
+                   || text.match(/FNOL\s*#?\s*(\d+)/i)
+                   || text.match(/fnol_id[:\s]+(\d+)/i);
+      if (idMatch) { fnolId = parseInt(idMatch[1]); setTimeout(refreshFnol, 500); }
+    }
+  }
+
+  // ── Phase 3: FNOL Record ───────────────────────────────────────────────────
+  async function refreshFnol() {
+    if (!fnolId) return;
+    try {
+      const res = await fetch(`${mcpUrl()}/api/fnol/get_submission/${fnolId}?lob=${lob}`);
+      if (!res.ok) { fnolId = null; renderFnol(null); return; }
+      const data = await res.json();
+      renderFnol(data);
+    } catch (e) { console.warn('FNOL refresh failed', e); }
+  }
+
+  // Discover the latest FNOL for a given policy number
+  async function discoverFnolByPolicy(policyNumber) {
+    if (!policyNumber) return;
+    try {
+      const res = await fetch(`${mcpUrl()}/api/fnol/get_by_policy/${encodeURIComponent(policyNumber)}?lob=${lob}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data && data.id) { renderFnol(data); }
+    } catch (e) { console.warn('FNOL by-policy lookup failed', e); }
+  }
+
+  async function findFnolManual() {
+    const pn = document.getElementById('fnolPolicyInput').value.trim()
+               || document.getElementById('policyInput').value.trim();
+    if (!pn) { alert('Enter a policy number in the Policy Lookup panel or the Find FNOL input first'); return; }
+    await discoverFnolByPolicy(pn);
+    if (!fnolId) addMsg('system', `No FNOL found for ${pn} with LOB=${lob}`);
+  }
+
+  async function cleanupDrafts() {
+    const pn = document.getElementById('policyInput').value.trim();
+    if (!pn) { addMsg('error', 'Enter a policy number in Phase 0 first'); return; }
+    if (!confirm(`Delete all DRAFT FNOLs for policy ${pn} (${lob})? This cannot be undone.`)) return;
+    try {
+      const res = await fetch(`${mcpUrl()}/api/fnol/cleanup_drafts/${encodeURIComponent(pn)}?lob=${lob}`, { method: 'DELETE' });
+      const data = await res.json();
+      addMsg('system', `Drafts cleaned up: ${JSON.stringify(data)}`);
+      fnolId = null; claimNumber = null;
+      document.getElementById('fnolBody').innerHTML = '<div class="policy-empty">Drafts cleared — start a new chat</div>';
+      document.getElementById('submitFnolBtn').disabled = true;
+    } catch(e) { addMsg('error', `Cleanup error: ${e.message}`); }
+  }
+
+  function renderFnol(data) {
+    const body = document.getElementById('fnolBody');
+    const submitBtn = document.getElementById('submitFnolBtn');
+
+    if (!data) {
+      body.innerHTML = '<div class="policy-empty">No FNOL found</div>';
+      submitBtn.disabled = true;
+      return;
+    }
+
+    fnolId = data.id;
+    if (data.claim_number) {
+      claimNumber = data.claim_number;
+      document.getElementById('verifyCoverageBtn').disabled = false;
+      document.getElementById('scoreCrBtn').disabled = false;
+      document.getElementById('computeSegBtn').disabled = false;
+      setPhase(4);
+    } else {
+      setPhase(3);
+    }
+
+    const status = data.status || 'draft';
+    submitBtn.disabled = status === 'submitted';
+
+    const FIELDS = [
+      ['ID',              'id'],
+      ['Status',          'status'],
+      ['Policy #',        'policy_number'],
+      ['Name',            'policyholder_name'],
+      ['LOB',             'lob'],
+      ['Loss Type',       'loss_type'],
+      ['Cause of Loss',   'cause_of_loss'],
+      ['Date of Loss',    'date_of_loss'],
+      ['Time of Loss',    'time_of_loss'],
+      ...(lob === 'Motor'
+        ? [['Accident Loc', 'accident_location']]
+        : [['Area Affected', 'area_affected'], ['Occupancy', 'occupancy_at_loss'], ['Sudden/Gradual','sudden_vs_gradual']]),
+      ['Severity',        'severity'],
+      ['Urgency',         'urgency_indicator'],
+      ['Confidence',      'overall_confidence'],
+      ['Claim #',         'claim_number'],
+    ];
+
+    let html = `<div class="fnol-id-badge">FNOL #${data.id}</div>`;
+    for (const [label, key] of FIELDS) {
+      const val = data[key];
+      if (key === 'status') {
+        html += `<div class="kv"><span class="kv-label">${label}</span><span class="kv-value"><span class="badge badge-${val}">${val}</span></span></div>`;
+      } else if (key === 'overall_confidence' && val != null) {
+        const pct = (parseFloat(val) * 100).toFixed(0);
+        html += `<div class="kv"><span class="kv-label">${label}</span><span class="kv-value">${pct}%</span></div>`;
+      } else {
+        html += `<div class="kv"><span class="kv-label">${label}</span><span class="kv-value ${val == null ? 'null' : ''}">${val ?? '—'}</span></div>`;
+      }
+    }
+    body.innerHTML = html;
+  }
+
+  async function submitFnol() {
+    if (!fnolId) return;
+    const btn = document.getElementById('submitFnolBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spin"></span>Submitting…';
+    setPhase(3);
+    try {
+      const res = await fetch(`${mcpUrl()}/api/fnol/submit/${fnolId}?lob=${lob}`, { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) {
+        addMsg('error', `Submit failed: ${data.detail || JSON.stringify(data)}`);
+        btn.disabled = false; btn.textContent = 'Submit FNOL';
+        return;
+      }
+      const cn = data.claim_number || data.fnol?.claim_number;
+      if (cn) {
+        claimNumber = cn;
+        document.getElementById('verifyCoverageBtn').disabled = false;
+        document.getElementById('scoreCrBtn').disabled = false;
+        document.getElementById('computeSegBtn').disabled = false;
+        addMsg('system', `✓ FNOL submitted — Claim #: ${cn}`);
+        setPhase(4);
+      } else {
+        addMsg('system', `FNOL submitted`);
+        setPhase(3);
+      }
+      renderFnol(data.fnol || data);
+    } catch (e) {
+      addMsg('error', `Submit error: ${e.message}`);
+      btn.disabled = false; btn.textContent = 'Submit FNOL';
+    }
+  }
+
+  function setManualClaim() {
+    const val = document.getElementById('manualClaimInput').value.trim();
+    if (!val) return;
+    claimNumber = val;
+    document.getElementById('verifyCoverageBtn').disabled = false;
+    document.getElementById('scoreCrBtn').disabled = false;
+    document.getElementById('computeSegBtn').disabled = false;
+    const disp = document.getElementById('claimNumberDisplay');
+    disp.textContent = `Claim #: ${claimNumber}`;
+    disp.style.display = 'block';
+    addMsg('system', `Claim # set manually: ${claimNumber}`);
+    setPhase(4);
+  }
+
+  // ── Phase 4: Coverage Verification ────────────────────────────────────────
+  async function verifyCoverage() {
+    if (!claimNumber) { addMsg('error', 'No claim number yet — submit FNOL first'); return; }
+    const btn = document.getElementById('verifyCoverageBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spin"></span>Verifying…';
+    document.getElementById('coverageBody').innerHTML = '<div class="policy-empty"><span class="spin"></span> Running LLM coverage check…</div>';
+    try {
+      const res = await fetch(
+        `${mcpUrl()}/api/v1/policy_coverage/api/policy_coverage/verify/${encodeURIComponent(claimNumber)}?lob=${lob}`,
+        { method: 'POST' }
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || JSON.stringify(data));
+      renderCoverage(data);
+      addMsg('system', `Coverage verified: ${data.coverage_verdict || 'see panel'}`);
+      document.getElementById('scoreCrBtn').disabled = false;
+      document.getElementById('computeSegBtn').disabled = false;
+      setPhase(4);
+    } catch (e) {
+      document.getElementById('coverageBody').innerHTML = `<div style="color:var(--red);font-size:12px;padding:8px">${e.message}</div>`;
+      addMsg('error', `Coverage verify error: ${e.message}`);
+    }
+    btn.disabled = false; btn.textContent = 'Verify Coverage';
+  }
+
+  async function getCoverageResult() {
+    if (!claimNumber) return;
+    try {
+      const res = await fetch(
+        `${mcpUrl()}/api/v1/policy_coverage/api/policy_coverage/result/${encodeURIComponent(claimNumber)}?lob=${lob}`
+      );
+      const data = await res.json();
+      if (data.found) renderCoverage(data);
+    } catch (e) { console.warn('coverage result fetch failed', e); }
+  }
+
+  function renderCoverage(d) {
+    const verdict = d.coverage_verdict || '';
+    const badgeCls = verdictBadgeClass(verdict);
+
+    const isMotor = lob === 'Motor';
+    const licenseOk = d.license_valid === undefined || d.license_valid === true || d.license_valid === 1;
+
+    const html = `
+      <div class="coverage-card">
+        <div class="coverage-verdict-row">
+          <span class="kv-label">Verdict</span>
+          <span class="badge ${badgeCls}">${verdict || 'Unknown'}</span>
+        </div>
+        ${isMotor && d.claim_type ? `<div class="kv"><span class="kv-label">Claim Type</span><span class="kv-value" style="color:var(--blue);font-weight:600">${d.claim_type} (${d.claim_type === 'OD' ? 'Own Damage' : 'Third Party'})</span></div>` : ''}
+        <div class="kv"><span class="kv-label">Exclusion Triggered</span><span class="kv-value">${d.exclusion_triggered ? 'Yes' : 'No'}</span></div>
+        ${d.exclusion_details ? `<div class="kv"><span class="kv-label">Exclusion</span><span class="kv-value">${d.exclusion_details}</span></div>` : ''}
+        ${isMotor ? `<div class="kv"><span class="kv-label">Driver License</span><span class="kv-value" style="color:${licenseOk ? 'var(--green)' : 'var(--red)'}">${licenseOk ? 'Valid ✓' : 'EXPIRED ✗'}</span></div>` : ''}
+        ${isMotor && !licenseOk && d.license_expiry_note ? `<div class="kv"><span class="kv-label">License Note</span><span class="kv-value" style="color:var(--red);font-size:10px">${d.license_expiry_note}</span></div>` : ''}
+        ${isMotor ? `<div class="kv"><span class="kv-label">Zero Dep Applied</span><span class="kv-value" style="color:${d.zero_dep_applied ? 'var(--green)' : 'var(--txt3)'}">${d.zero_dep_applied ? 'Yes ✓' : 'No'}</span></div>` : ''}
+        ${isMotor && d.engine_protection_note ? `<div class="kv"><span class="kv-label">Engine Protection</span><span class="kv-value" style="color:var(--amber);font-size:10px">${d.engine_protection_note}</span></div>` : ''}
+      </div>
+      <div class="amounts-row">
+        <div class="amount-tile">
+          <div class="amount-label">${isMotor && d.claim_type ? d.claim_type + ' Limit' : 'Coverage Limit'}</div>
+          <div class="amount">${formatCurrency(d.remaining_coverage_limit ?? d.coverage_limit)}</div>
+        </div>
+        <div class="amount-tile">
+          <div class="amount-label">Deductible</div>
+          <div class="amount">${formatCurrency(d.deductible)}</div>
+        </div>
+      </div>
+      <div class="amounts-row">
+        <div class="amount-tile">
+          <div class="amount-label">Loss Amount</div>
+          <div class="amount">${formatCurrency(d.loss_amount)}</div>
+        </div>
+        <div class="amount-tile">
+          <div class="amount-label">Net Payable</div>
+          <div class="amount" style="color:var(--green)">${formatCurrency(d.net_payable)}</div>
+        </div>
+      </div>
+      ${d.coverage_notes ? `<div class="coverage-notes">${d.coverage_notes}</div>` : ''}
+      ${d.verified_at ? `<div style="font-size:10px;color:var(--txt3);margin-top:6px">Verified: ${new Date(d.verified_at).toLocaleString()}</div>` : ''}
+    `;
+    document.getElementById('coverageBody').innerHTML = html;
+  }
+
+  // ── Document upload (Phase 5) ──────────────────────────────────────────────
+  async function uploadDoc() {
+    if (!claimNumber) { document.getElementById('uploadDocStatus').style.color = 'var(--red)'; document.getElementById('uploadDocStatus').textContent = 'Set a claim number first'; return; }
+    const fileInput = document.getElementById('docFileInput');
+    if (!fileInput.files.length) { document.getElementById('uploadDocStatus').style.color = 'var(--amber)'; document.getElementById('uploadDocStatus').textContent = 'Choose a file first'; return; }
+
+    const btn = document.getElementById('uploadDocBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spin"></span>';
+    document.getElementById('uploadDocStatus').style.color = 'var(--txt3)';
+    document.getElementById('uploadDocStatus').textContent = 'Uploading…';
+
+    const form = new FormData();
+    form.append('claim_number', claimNumber);
+    form.append('lob', lob);
+    const selectedType = document.getElementById('docTypeSelect').value;
+    if (selectedType) form.append('document_type', selectedType);
+    form.append('file', fileInput.files[0]);
+
+    try {
+      const res = await fetch(`${mcpUrl()}/api/v1/document_submission/api/documents/upload`, {
+        method: 'POST',
+        body: form,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || JSON.stringify(data));
+      document.getElementById('uploadDocStatus').style.color = 'var(--green)';
+      document.getElementById('uploadDocStatus').textContent = `Uploaded: ${data.file_name} (${data.document_type})`;
+      fileInput.value = '';
+      // Refresh docs list + re-score readiness
+      setTimeout(() => { listDocs(); scoreCr(); }, 400);
+    } catch (e) {
+      document.getElementById('uploadDocStatus').style.color = 'var(--red)';
+      document.getElementById('uploadDocStatus').textContent = `Upload error: ${e.message}`;
+    }
+    btn.disabled = false;
+    btn.textContent = 'Upload';
+  }
+
+  async function listDocs() {
+    if (!claimNumber) return;
+    try {
+      const res = await fetch(`${mcpUrl()}/api/v1/document_submission/api/documents/claim/${encodeURIComponent(claimNumber)}`);
+      const docs = await res.json();
+      if (!Array.isArray(docs) || !docs.length) {
+        document.getElementById('docsList').innerHTML = '<div style="font-size:10px;color:var(--txt3)">No documents uploaded yet</div>';
+        return;
+      }
+      document.getElementById('docsList').innerHTML = docs.map(d =>
+        `<div class="check-item" style="border-bottom:1px solid var(--border);padding:3px 0;">` +
+        `<div class="check-dot ${d.status === 'Validated' || d.status === 'Uploaded' ? 'ok' : 'miss'}"></div>` +
+        `<span class="kv-label" style="flex:1;font-size:10px">${d.document_type} — ${d.file_name}</span>` +
+        `<span style="font-size:9px;color:var(--txt3)">${d.status}</span></div>`
+      ).join('');
+    } catch (e) { console.warn('listDocs failed', e); }
+  }
+
+  // ── Chat tab switching ─────────────────────────────────────────────────────
+  function switchChatTab(tab) {
+    document.getElementById('tab-fnol').classList.toggle('active', tab === 'fnol');
+    document.getElementById('tab-cr').classList.toggle('active', tab === 'cr');
+    document.getElementById('messages').style.display    = tab === 'fnol' ? 'flex' : 'none';
+    document.getElementById('chatInputFnol').style.display = tab === 'fnol' ? 'flex' : 'none';
+    document.getElementById('crMessages').style.display  = tab === 'cr' ? 'flex' : 'none';
+    document.getElementById('chatInputCr').style.display = tab === 'cr' ? 'flex' : 'none';
+  }
+
+  // ── Phase 5: Claim Readiness MCP ───────────────────────────────────────────
+  async function scoreCr() {
+    if (!claimNumber) { addMsg('error', 'No claim number — submit FNOL first'); return; }
+    const btn = document.getElementById('scoreCrBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spin"></span>Scoring…';
+    document.getElementById('crBody').innerHTML = '<div class="policy-empty"><span class="spin"></span> Scoring readiness…</div>';
+    try {
+      const res = await fetch(
+        `${mcpUrl()}/api/v1/claim_readiness/api/claim_readiness/score/${encodeURIComponent(claimNumber)}?lob=${lob}`,
+        { method: 'POST' }
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || JSON.stringify(data));
+      renderCrResult(data);
+      listDocs();
+      setPhase(5);
+      // Switch to CR agent tab and prefill claim number
+      switchChatTab('cr');
+      const crInput = document.getElementById('crMsgInput');
+      if (!crHistory.length && !crInput.value) {
+        crInput.value = `Check claim readiness for claim ${claimNumber}`;
+      }
+    } catch (e) {
+      document.getElementById('crBody').innerHTML = `<div style="color:var(--red);font-size:12px;padding:8px">${e.message}</div>`;
+    }
+    btn.disabled = false;
+    btn.textContent = 'Score Claim Readiness';
+  }
+
+  async function getCrResult() {
+    if (!claimNumber) return;
+    try {
+      const res = await fetch(`${mcpUrl()}/api/v1/claim_readiness/api/claim_readiness/validation/${encodeURIComponent(claimNumber)}?lob=${lob}`);
+      const data = await res.json();
+      if (data.claim_number) renderCrResult(data);
+    } catch (e) { console.warn('CR result fetch failed', e); }
+  }
+
+  async function ackDocs() {
+    if (!claimNumber) return;
+    const notes = prompt('Optional note for adjuster:') || '';
+    const btn = document.getElementById('ackDocsBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spin"></span>Acknowledging…';
+    try {
+      const res = await fetch(
+        `${mcpUrl()}/api/v1/claim_readiness/api/claim_readiness/acknowledge_docs/${encodeURIComponent(claimNumber)}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ lob, notes }),
+        }
+      );
+      const data = await res.json();
+      btn.style.display = 'none';
+      addCrMsg('system', `Docs acknowledged — adjuster notified`);
+      setTimeout(getCrResult, 600);
+    } catch (e) {
+      addCrMsg('error', `Acknowledge error: ${e.message}`);
+    }
+    btn.disabled = false;
+    btn.textContent = 'Acknowledge Missing Docs';
+  }
+
+  function renderCrResult(d) {
+    const score = d.completeness_score ?? 0;
+    const isMotor = lob === 'Motor';
+    const overallRes  = d.overall_result || '';
+    const overallColor = overallRes === 'Ready' ? 'var(--green)' : overallRes.includes('Flagged') ? 'var(--red)' : 'var(--amber)';
+    const fraudRisk = (d.fraud_risk || '').toLowerCase();
+    const fraudColor = fraudRisk === 'low' ? 'var(--green)' : fraudRisk === 'high' ? 'var(--red)' : 'var(--amber)';
+    const barColor   = score >= 80 ? 'var(--green)' : score >= 50 ? 'var(--amber)' : 'var(--red)';
+    const docsIncomplete = (d.docs_status || '').toLowerCase() === 'incomplete';
+
+    document.getElementById('ackDocsBtn').style.display = docsIncomplete ? 'block' : 'none';
+
+    let motorChecklist = '';
+    if (isMotor) {
+      const checks = [
+        ['Vehicle Details',  d.vehicle_details_present],
+        ['Driver Details',   d.driver_details_present],
+        ['Damage Photos',    d.damage_photos_present],
+        ['DL Copy',          d.dl_doc_present],
+        ['RC Book',          d.rc_book_present],
+        ['Police FIR',       d.police_fir_present],
+      ];
+      motorChecklist = `
+        <div class="section-label" style="padding-top:8px;">Motor Checklist</div>
+        ${checks.map(([label, val]) =>
+          `<div class="check-item"><div class="check-dot ${val ? 'ok' : 'miss'}"></div>` +
+          `<span class="kv-label" style="flex:1">${label}</span>` +
+          `<span style="font-size:10px;color:${val ? 'var(--green)' : 'var(--red)'}">${val ? 'Yes' : 'No'}</span></div>`
+        ).join('')}`;
+    }
+
+    document.getElementById('crBody').innerHTML = `
+      <div class="kv"><span class="kv-label">Overall Result</span><span class="kv-value" style="color:${overallColor};font-weight:700">${overallRes || '—'}</span></div>
+      <div class="kv"><span class="kv-label">Completeness</span><span class="kv-value" style="font-size:13px;font-weight:700;color:${barColor}">${score}%</span></div>
+      <div class="score-bar-bg"><div class="score-bar-fill" style="width:${score}%;background:${barColor};"></div></div>
+      ${d.missing_fields ? `<div class="kv"><span class="kv-label">Missing Fields</span><span class="kv-value" style="color:var(--amber);font-size:10px">${d.missing_fields}</span></div>` : ''}
+      <div class="kv"><span class="kv-label">Coverage Status</span><span class="kv-value">${d.coverage_status || '—'}</span></div>
+      <div class="kv"><span class="kv-label">Docs Status</span><span class="kv-value" style="color:${docsIncomplete ? 'var(--amber)' : 'var(--green)'}">${d.docs_status || '—'}</span></div>
+      ${d.missing_docs ? `<div class="kv"><span class="kv-label">Missing Docs</span><span class="kv-value" style="color:var(--amber);font-size:10px">${d.missing_docs}</span></div>` : ''}
+      <div class="kv"><span class="kv-label">Fraud Risk</span><span class="kv-value" style="color:${fraudColor};font-weight:600">${d.fraud_risk || '—'}${d.fraud_risk_score != null ? ' (' + d.fraud_risk_score + '/100)' : ''}</span></div>
+      ${d.fraud_flags ? `<div class="kv"><span class="kv-label">Fraud Flags</span><span class="kv-value" style="color:var(--red);font-size:10px">${d.fraud_flags}</span></div>` : ''}
+      ${d.recommendation ? `<div class="kv" style="flex-direction:column;gap:3px;"><span class="kv-label">Recommendation</span><span class="kv-value" style="text-align:left;font-size:11px;color:var(--txt)">${d.recommendation}</span></div>` : ''}
+      ${d.validated_at ? `<div style="font-size:10px;color:var(--txt3);margin-top:4px">Scored: ${d.validated_at}</div>` : ''}
+      ${motorChecklist}
+    `;
+    document.getElementById('crClaimDisplay').textContent = `Claim #: ${claimNumber}`;
+    document.getElementById('crClaimDisplay').style.display = 'block';
+  }
+
+  // ── Claim Readiness Agent chat (port 7708) ─────────────────────────────────
+  function addCrMsg(role, text) {
+    const el = document.createElement('div');
+    el.className = `msg ${role}`;
+    el.textContent = text;
+    const container = document.getElementById('crMessages');
+    container.appendChild(el);
+    container.scrollTop = container.scrollHeight;
+    return el;
+  }
+
+  function resetCrChat() {
+    crHistory = [];
+    document.getElementById('crMessages').innerHTML = '<div class="msg system">Chat reset.</div>';
+  }
+
+  async function sendCrMessage() {
+    if (crStreaming) return;
+    const input = document.getElementById('crMsgInput');
+    const text = input.value.trim();
+    if (!text) return;
+    input.value = '';
+    addCrMsg('user', text);
+    document.getElementById('crSendBtn').disabled = true;
+    crStreaming = true;
+
+    const agentEl = addCrMsg('agent', '');
+    agentEl.classList.add('streaming');
+    let fullText = '';
+
+    try {
+      const resp = await fetch('http://localhost:7708/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: text, lob, history: crHistory }),
+      });
+      if (!resp.ok) { const e = await resp.text(); throw new Error(`${resp.status}: ${e}`); }
+
+      const reader = resp.body.getReader();
+      const dec = new TextDecoder();
+      let buf = '';
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+        const lines = buf.split('\n');
+        buf = lines.pop();
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          const raw = line.slice(6);
+          const rawTrimmed = raw.trim();
+          if (!rawTrimmed || rawTrimmed === '[DONE]') continue;
+          if (rawTrimmed.startsWith('[Tool:') || rawTrimmed.startsWith('[AGENT_ERROR]')) {
+            console.log('[CR Agent]', rawTrimmed);
+            continue;
+          }
+          try {
+            const parsed = JSON.parse(rawTrimmed);
+            if (parsed !== null && typeof parsed === 'object') {
+              fullText += parsed.content ?? parsed.text ?? parsed.delta ?? '';
+            } else {
+              fullText += raw;
+            }
+          } catch {
+            fullText += raw;
+          }
+          agentEl.innerHTML = _renderMarkdown(fullText);
+          document.getElementById('crMessages').scrollTop = 99999;
+        }
+      }
+    } catch (e) {
+      agentEl.remove();
+      addCrMsg('error', `Error: ${e.message}`);
+    }
+
+    agentEl.classList.remove('streaming');
+    if (fullText) {
+      crHistory.push({ role: 'user', content: text });
+      crHistory.push({ role: 'assistant', content: fullText });
+    }
+    crStreaming = false;
+    document.getElementById('crSendBtn').disabled = false;
+  }
+
+  // ── Phase 6: Claim Segmentation / STP ─────────────────────────────────────
+  async function computeSegmentation() {
+    if (!claimNumber) { addMsg('error', 'No claim number — submit FNOL first'); return; }
+    const btn = document.getElementById('computeSegBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spin"></span>Computing…';
+    document.getElementById('segBody').innerHTML = '<div class="policy-empty"><span class="spin"></span> Computing STP segmentation…</div>';
+    try {
+      const res = await fetch(
+        `${mcpUrl()}/api/v1/segmentation/api/segmentation/compute/${encodeURIComponent(claimNumber)}?lob=${lob}`,
+        { method: 'POST' }
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || JSON.stringify(data));
+      renderSegResult(data);
+      setPhase(6);
+    } catch (e) {
+      document.getElementById('segBody').innerHTML = `<div style="color:var(--red);font-size:12px;padding:8px">${e.message}</div>`;
+    }
+    btn.disabled = false;
+    btn.textContent = 'Compute STP Segmentation';
+  }
+
+  async function getSegResult() {
+    if (!claimNumber) return;
+    try {
+      const res = await fetch(
+        `${mcpUrl()}/api/v1/segmentation/api/segmentation/stp/${encodeURIComponent(claimNumber)}?lob=${lob}`
+      );
+      const data = await res.json();
+      if (res.ok && data && data.stp_category) renderSegResult(data);
+    } catch {}
+  }
+
+  function renderSegResult(d) {
+    if (!d) return;
+    const score = d.stp_score ?? d.stp_score ?? '—';
+    const cat   = d.stp_category || '—';
+    const catClass = {
+      'Full STP':      'seg-full-stp',
+      'Fast Track':    'seg-fast-track',
+      'Vendor STP':    'seg-vendor-stp',
+      'Manual Review': 'seg-manual',
+    }[cat] || 'seg-manual';
+
+    const fraud   = d.fraud_ambiguity || '—';
+    const subro   = d.subrogation || '—';
+    const readiness = d.readiness != null ? d.readiness + '%' : '—';
+    const vis     = d.vis != null ? d.vis : '—';
+    const reused  = d.reused ? ' <span style="font-size:10px;color:var(--txt3)">(cached)</span>' : '';
+
+    document.getElementById('segBody').innerHTML = `
+      <div class="kv"><span class="kv-label">STP Category</span><span class="kv-value"><span class="seg-badge ${catClass}">${cat}</span>${reused}</span></div>
+      <div class="kv"><span class="kv-label">STP Score</span><span class="kv-value" style="font-weight:700;font-size:13px">${score}/100</span></div>
+      <div class="kv"><span class="kv-label">Readiness</span><span class="kv-value">${readiness}</span></div>
+      <div class="kv"><span class="kv-label">Fraud Ambiguity</span><span class="kv-value" style="color:${fraud==='High'?'var(--red)':fraud==='Medium'?'var(--amber)':'var(--green)'}">${fraud}</span></div>
+      <div class="kv"><span class="kv-label">Subrogation</span><span class="kv-value" style="color:${subro==='High'?'var(--red)':subro==='Medium'?'var(--amber)':'var(--green)'}">${subro}</span></div>
+      <div class="kv"><span class="kv-label">Vendor Involvement</span><span class="kv-value">${vis}</span></div>
+      ${d.stp_id ? `<div style="font-size:10px;color:var(--txt3);margin-top:4px">ID: ${d.stp_id}</div>` : ''}
+    `;
+  }
+
+  // ── Event listeners ────────────────────────────────────────────────────────
+  document.getElementById('msgInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+  });
+  document.getElementById('crMsgInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendCrMessage(); }
+  });
+
+  // Detect fnol_id from agent response text (heuristic)
+  const _origAddMsg = addMsg;
+  const _checkFnolId = (text) => {
+    if (fnolId) return;
+    const m = text.match(/fnol[_\s#]*(?:id[:\s#]*)?(\d+)/i) || text.match(/\b(?:id|record)\s*[:#]?\s*(\d+)/i);
+    if (m) { fnolId = parseInt(m[1]); setTimeout(refreshFnol, 500); }
+  };
+
+  // Poll FNOL every 6s when we have an id
+  setInterval(() => { if (fnolId && !streaming) refreshFnol(); }, 6000);
+
+  // Init
+  setPhase(0);
+</script>
+</body>
+</html>
