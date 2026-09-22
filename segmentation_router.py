@@ -1,3 +1,4 @@
+
 Claims processing in the motor insurance space involves handling large volumes of unstructured information across claim descriptions, policy data, documents, and visual evidence.
 
 The challenge is not just collecting this information, but understanding it, validating the evidence, analyzing the damage, and routing the claim to the right path for processing.
