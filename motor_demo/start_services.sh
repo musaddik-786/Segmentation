@@ -29,27 +29,28 @@ sleep 1
 cd "$BASE/MotorTriageAgents"
 nohup $PYTHON MCP/main.py > "$LOG_DIR/mcp.log" 2>&1 &
 MCP_PID=$!
-echo "[1/4] MCP server started (PID $MCP_PID, port 8500)"
-sleep 3
+echo "[1/4] MCP server started (PID $MCP_PID, port 8500) — waiting 10s..."
+sleep 10
 
 # ── Terminal 2: Intake Validation Agent (port 8501) ──────────────────────────
 nohup $PYTHON MotorIntakeValidationAgent/server.py > "$LOG_DIR/intake.log" 2>&1 &
 INTAKE_PID=$!
-echo "[2/4] Intake Validation Agent started (PID $INTAKE_PID, port 8501)"
-sleep 3
+echo "[2/4] Intake Validation Agent started (PID $INTAKE_PID, port 8501) — waiting 10s..."
+sleep 10
 
 # ── Terminal 3: Motor Triage Agent (port 8502) ───────────────────────────────
+# This agent loads an ML model — needs the most time to be ready
 nohup $PYTHON MotorTriageAgent/server.py > "$LOG_DIR/triage.log" 2>&1 &
 TRIAGE_PID=$!
-echo "[3/4] Motor Triage Agent started (PID $TRIAGE_PID, port 8502)"
-sleep 3
+echo "[3/4] Motor Triage Agent started (PID $TRIAGE_PID, port 8502) — waiting 20s for model load..."
+sleep 20
 
 # ── Terminal 4: Frontend App (port 5000) ─────────────────────────────────────
 cd "$BASE/motor_claims"
 nohup npm run dev > "$LOG_DIR/app.log" 2>&1 &
 APP_PID=$!
-echo "[4/4] Frontend app started (PID $APP_PID, port 5000)"
-sleep 5
+echo "[4/4] Frontend app started (PID $APP_PID, port 5000) — waiting 8s..."
+sleep 8
 
 # ── Health check ──────────────────────────────────────────────────────────────
 echo ""

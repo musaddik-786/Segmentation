@@ -13,7 +13,8 @@
 setlocal
 set VM_USER=azureuser
 set VM_HOST=20.40.57.76
-set APP_PORT=5000
+set VM_APP_PORT=5000
+set LOCAL_PORT=5001
 set KEY_FILE=%USERPROFILE%\.ssh\motor_demo_key
 set REMOTE_SCRIPT=/home/azureuser/Ramakrishna/claims-SLM-Finetune/start_services.sh
 
@@ -57,27 +58,34 @@ if errorlevel 1 (
 
 :: ── Step 2: Open browser ─────────────────────────────────────────────────────
 echo.
-echo [2/3] Opening browser at http://localhost:%APP_PORT%...
+:: ── Check if local port is free; kill anything using it ─────────────────────
+echo Checking if local port %LOCAL_PORT% is free...
+for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":%LOCAL_PORT% " ^| findstr LISTENING') do (
+    echo   Found process %%a on port %LOCAL_PORT% — closing it...
+    taskkill /PID %%a /F >nul 2>&1
+)
+
+echo [2/3] Opening browser at http://localhost:%LOCAL_PORT%...
 timeout /t 2 /nobreak >nul
-start "" "http://localhost:%APP_PORT%"
+start "" "http://localhost:%LOCAL_PORT%"
 
 :: ── Step 3: Port forward (keeps this window open — close to stop demo) ───────
 echo.
-echo [3/3] Port forwarding: localhost:%APP_PORT%  ──^>  VM:%APP_PORT%
+echo [3/3] Port forwarding: localhost:%LOCAL_PORT%  ──^>  VM:%VM_APP_PORT%
 echo.
 echo ============================================================
-echo  Demo is LIVE at http://localhost:%APP_PORT%
+echo  Demo is LIVE at http://localhost:%LOCAL_PORT%
 echo.
 echo  Keep this window open while the demo runs.
 echo  Close this window (or press Ctrl+C) to stop the tunnel.
 echo ============================================================
 echo.
 
-ssh -i "%KEY_FILE%" -N -L %APP_PORT%:localhost:%APP_PORT% %VM_USER%@%VM_HOST%
+ssh -i "%KEY_FILE%" -N -L %LOCAL_PORT%:localhost:%VM_APP_PORT% %VM_USER%@%VM_HOST%
 
 :: ── Tunnel closed ─────────────────────────────────────────────────────────────
 echo.
 echo Demo tunnel closed. Services are still running on the VM.
-echo (Re-run this file to reconnect.)
+echo (Re-run this file to reconnect at http://localhost:%LOCAL_PORT%)
 echo.
 pause
