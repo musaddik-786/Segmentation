@@ -1,250 +1,205 @@
-"""
-handler.py — Claim Segmentation / STP Classification
-──────────────────────────────────────────────────────
-Rule-based computation of an STP (Straight-Through-Processing) score and
-classification for a claim, persisted to stp_classification and
-segmentation_result_output.
+#!/bin/bash
 
-Scoring inputs (in priority order):
-  - completeness_score  → from intake_validation_result_output (ClaimReadinessAgent)
-  - fraud_risk          → from intake_validation_result_output (ClaimReadinessAgent)
-  - subrogation         → derived from loss_type on the claim
-  - vis                 → vendor involvement score from assigned_vendor on claim
-"""
+# ============================================================
+# Motor Triage Demo Launcher
+# ============================================================
 
-import logging
-import os
-import sys
-from datetime import datetime
+BASE_DIR="/home/azureuser/Ramakrishna/claims-SLM-Finetune"
+AGENTS_DIR="$BASE_DIR/MotorTriageAgents"
+VENV="$BASE_DIR/slm-env/bin/python"
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "common"))
+LOG_DIR="$BASE_DIR/demo_logs"
 
-from db import get_db_connection, row_to_dict  # noqa: E402
+mkdir -p "$LOG_DIR"
 
-log = logging.getLogger(__name__)
+echo ""
+echo "============================================================"
+echo "        MOTOR TRIAGE DEMO - STARTING"
+echo "============================================================"
+echo ""
 
+# ------------------------------------------------------------
+# Function: check if a port is already being used
+# ------------------------------------------------------------
 
-def get_claim_for_segmentation(claim_number: str) -> dict:
-    conn = get_db_connection()
-    try:
-        cur = conn.cursor()
-        cur.execute("SELECT * FROM claims WHERE claim_number = %s", (claim_number,))
-        return row_to_dict(cur.fetchone())
-    finally:
-        conn.close()
+check_port() {
+    local PORT=$1
 
+    if (echo > /dev/tcp/127.0.0.1/$PORT) >/dev/null 2>&1; then
+        echo "[ERROR] Port $PORT is already in use."
+        echo "        Please stop the existing application first."
+        exit 1
+    fi
+}
 
-def _get_readiness_result(claim_id: str) -> dict:
-    """Fetch ClaimReadinessAgent output if available."""
-    conn = get_db_connection()
-    try:
-        cur = conn.cursor()
-        cur.execute(
-            "SELECT * FROM intake_validation_result_output WHERE claim_number = %s",
-            (claim_id,),
-        )
-        return row_to_dict(cur.fetchone()) or {}
-    finally:
-        conn.close()
+# ------------------------------------------------------------
+# Check required ports
+# ------------------------------------------------------------
 
+echo "[1/5] Checking ports..."
 
-def _compute_readiness(claim: dict, readiness_result: dict) -> int:
-    """
-    Use completeness_score from ClaimReadinessAgent when available.
-    Fall back to a simplified field check if the readiness agent hasn't run yet.
-    """
-    if readiness_result.get("completeness_score") is not None:
-        return int(readiness_result["completeness_score"])
-    fields = ["estimated_cost", "severity", "coverage", "loss_type", "location"]
-    populated = sum(1 for f in fields if claim.get(f) not in (None, "", 0))
-    return int((populated / len(fields)) * 100)
+check_port 8500
+check_port 8501
+check_port 8502
+check_port 5000
 
+echo "      Ports are available."
+echo ""
 
-def _compute_fraud_ambiguity(claim: dict, readiness_result: dict) -> str:
-    """
-    Use fraud_risk from ClaimReadinessAgent when available.
-    Fall back to ai_confidence on the claim record.
-    """
-    fraud_risk = (readiness_result.get("fraud_risk") or "").strip()
-    if fraud_risk in ("Low", "Medium", "High"):
-        return fraud_risk
+# ------------------------------------------------------------
+# Function to start a process in its own process group
+# ------------------------------------------------------------
 
-    ai_confidence = claim.get("ai_confidence")
-    if ai_confidence is not None and ai_confidence < 50:
-        return "High"
-    if ai_confidence is not None and ai_confidence < 75:
-        return "Medium"
-    return "Low"
+start_process() {
+    local NAME=$1
+    local COMMAND=$2
+    local LOG_FILE=$3
 
+    echo "Starting $NAME..."
 
-def _compute_subrogation(claim: dict) -> str:
-    loss_type = (claim.get("loss_type") or "").lower()
-    if "motor" in loss_type or "auto" in loss_type or "vehicle" in loss_type:
-        return "High"
-    if "liability" in loss_type or "theft" in loss_type:
-        return "Medium"
-    return "Low"
+    setsid bash -c "$COMMAND" > "$LOG_FILE" 2>&1 &
 
+    local PID=$!
 
-def _compute_vis(claim: dict) -> int:
-    return 50 if claim.get("assigned_vendor") else 0
+    echo "$PID" > "$LOG_DIR/${NAME// /_}.pid"
 
+    echo "      PID: $PID"
+    echo "      Log: $LOG_FILE"
 
-def compute_stp_score(claim_number: str) -> dict:
-    claim = get_claim_for_segmentation(claim_number)
-    if not claim:
-        raise ValueError(f"Claim {claim_number} not found")
+    sleep 2
+}
 
-    claim_id = claim_number
+# ------------------------------------------------------------
+# Wait until a port becomes available
+# ------------------------------------------------------------
 
-    # ── Check for existing result — avoid recomputation ───────────────────────
-    existing = get_stp_classification(claim_number)
-    if existing and existing.get("stp_category"):
-        log.info("Returning existing STP result for %s", claim_number)
-        return {
-            "claim_number": claim_number,
-            "stp_id": existing.get("stp_id"),
-            "readiness": existing.get("readiness"),
-            "fraud_ambiguity": existing.get("fraud_ambiguity"),
-            "subrogation": existing.get("subrogation"),
-            "vis": existing.get("vis"),
-            "stp_score": existing.get("stp_score"),
-            "stp_category": existing.get("stp_category"),
-            "reused": True,
-        }
+wait_for_port() {
+    local PORT=$1
+    local NAME=$2
 
-    # ── Pull readiness/fraud from ClaimReadinessAgent output ─────────────────
-    readiness_result = _get_readiness_result(claim_id)
+    echo "      Waiting for $NAME on port $PORT..."
 
-    readiness       = _compute_readiness(claim, readiness_result)
-    fraud_ambiguity = _compute_fraud_ambiguity(claim, readiness_result)
-    subrogation     = _compute_subrogation(claim)
-    vis             = _compute_vis(claim)
+    for i in {1..30}; do
 
-    # Weighted score: readiness 50%, fraud (inverted) 25%, vis 15%, subrogation (inverted) 10%
-    fraud_score = {"Low": 100, "Medium": 60, "High": 20}.get(fraud_ambiguity, 50)
-    subro_score = {"Low": 100, "Medium": 60, "High": 20}.get(subrogation, 50)
+        if (echo > /dev/tcp/127.0.0.1/$PORT) >/dev/null 2>&1; then
+            echo "      $NAME is running."
+            return 0
+        fi
 
-    stp_score = int(
-        readiness * 0.50 + fraud_score * 0.25 + vis * 0.15 + subro_score * 0.10
-    )
+        sleep 1
 
-    coverage       = bool(claim.get("coverage"))
-    severity       = (claim.get("severity") or "").lower()
-    assigned_vendor = claim.get("assigned_vendor")
+    done
 
-    if stp_score >= 85 and coverage and severity in ("low", "medium"):
-        stp_category = "Full STP"
-    elif stp_score >= 70:
-        stp_category = "Fast Track"
-    elif assigned_vendor and stp_score >= 50:
-        stp_category = "Vendor STP"
-    else:
-        stp_category = "Manual Review"
+    echo ""
+    echo "[ERROR] $NAME did not start successfully."
+    echo ""
+    echo "Check the log file:"
+    echo "$LOG_DIR"
+    exit 1
+}
 
-    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-    stp_id = f"STP-{claim_number}-{timestamp}"
+# ============================================================
+# 1. MCP SERVER
+# ============================================================
 
-    conn = get_db_connection()
-    try:
-        cur = conn.cursor()
-        cur.execute(
-            """
-            INSERT INTO stp_classification
-              (stp_id, claim_number, readiness, fraud_ambiguity, subrogation, vis, stp_score, stp_category, created_at)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, NOW())
-            ON CONFLICT (claim_number) DO UPDATE SET
-              stp_id          = EXCLUDED.stp_id,
-              readiness       = EXCLUDED.readiness,
-              fraud_ambiguity = EXCLUDED.fraud_ambiguity,
-              subrogation     = EXCLUDED.subrogation,
-              vis             = EXCLUDED.vis,
-              stp_score       = EXCLUDED.stp_score,
-              stp_category    = EXCLUDED.stp_category,
-              created_at      = NOW()
-            """,
-            (stp_id, claim_id, readiness, fraud_ambiguity, subrogation, vis, stp_score, stp_category),
-        )
+start_process \
+    "MCP_Server" \
+    "cd '$AGENTS_DIR' && '$VENV' MCP/main.py" \
+    "$LOG_DIR/mcp.log"
 
-        cur.execute(
-            """
-            INSERT INTO segmentation_result_output
-              (claim_number, severity, complexity, stp_score, recommended_path, created_at)
-            VALUES (%s, %s, %s, %s, %s, NOW())
-            ON CONFLICT (claim_number) DO UPDATE SET
-              severity         = EXCLUDED.severity,
-              complexity       = EXCLUDED.complexity,
-              stp_score        = EXCLUDED.stp_score,
-              recommended_path = EXCLUDED.recommended_path,
-              created_at       = NOW()
-            """,
-            (claim_id, claim.get("severity"), claim.get("complexity"), stp_score, stp_category),
-        )
-        conn.commit()
-    except Exception:
-        conn.rollback()
-        raise
-    finally:
-        conn.close()
+wait_for_port 8500 "MCP Server"
 
-    return {
-        "claim_number": claim_number,
-        "stp_id": stp_id,
-        "readiness": readiness,
-        "fraud_ambiguity": fraud_ambiguity,
-        "subrogation": subrogation,
-        "vis": vis,
-        "stp_score": stp_score,
-        "stp_category": stp_category,
-        "reused": False,
-    }
+echo ""
 
+# ============================================================
+# 2. INTAKE VALIDATION AGENT
+# ============================================================
 
-def get_segmentation_result(claim_number: str) -> dict:
-    conn = get_db_connection()
-    try:
-        cur = conn.cursor()
-        cur.execute(
-            """
-            SELECT s.* FROM segmentation_result_output s
-            JOIN claims c ON c.claim_number = s.claim_number
-            WHERE c.claim_number = %s
-            ORDER BY s.id DESC LIMIT 1
-            """,
-            (claim_number,),
-        )
-        row = row_to_dict(cur.fetchone())
-        if not row:
-            cur.execute(
-                "SELECT * FROM segmentation_result_output WHERE claim_number = %s ORDER BY id DESC LIMIT 1",
-                (claim_number,),
-            )
-            row = row_to_dict(cur.fetchone())
-        return row
-    finally:
-        conn.close()
+start_process \
+    "Intake_Validation_Agent" \
+    "cd '$AGENTS_DIR' && '$VENV' MotorIntakeValidationAgent/server.py" \
+    "$LOG_DIR/intake_validation.log"
 
+wait_for_port 8501 "Intake Validation Agent"
 
-def get_stp_classification(claim_number: str) -> dict:
-    conn = get_db_connection()
-    try:
-        cur = conn.cursor()
-        cur.execute(
-            """
-            SELECT s.* FROM stp_classification s
-            JOIN claims c ON c.claim_number = s.claim_number
-            WHERE c.claim_number = %s
-            ORDER BY s.id DESC LIMIT 1
-            """,
-            (claim_number,),
-        )
-        row = row_to_dict(cur.fetchone())
-        if not row:
-            cur.execute(
-                "SELECT * FROM stp_classification WHERE claim_number = %s ORDER BY id DESC LIMIT 1",
-                (claim_number,),
-            )
-            row = row_to_dict(cur.fetchone())
-        return row
-    finally:
-        conn.close()
+echo ""
+
+# ============================================================
+# 3. MOTOR TRIAGE AGENT
+# ============================================================
+
+start_process \
+    "Motor_Triage_Agent" \
+    "cd '$AGENTS_DIR' && '$VENV' MotorTriageAgent/server.py" \
+    "$LOG_DIR/motor_triage.log"
+
+wait_for_port 8502 "Motor Triage Agent"
+
+echo ""
+
+# ============================================================
+# 4. MOTOR CLAIMS UI
+# ============================================================
+
+start_process \
+    "Motor_Claims_UI" \
+    "cd '$BASE_DIR/motor_claims' && npm run dev" \
+    "$LOG_DIR/motor_claims_ui.log"
+
+wait_for_port 5000 "Motor Claims UI"
+
+echo ""
+echo "============================================================"
+echo "        MOTOR TRIAGE DEMO IS READY"
+echo "============================================================"
+echo ""
+echo "MCP Server:             http://localhost:8500"
+echo "Intake Validation:      http://localhost:8501"
+echo "Motor Triage:           http://localhost:8502"
+echo "Motor Claims UI:        http://localhost:5000"
+echo ""
+echo "Logs:"
+echo "$LOG_DIR"
+echo ""
+echo "The SSH tunnel will remain active."
+echo "Press Ctrl+C to stop the demo."
+echo "============================================================"
+echo ""
+
+# ------------------------------------------------------------
+# Keep SSH session alive.
+# This is important because the Windows launcher uses
+# SSH port forwarding through this connection.
+# ------------------------------------------------------------
+
+cleanup() {
+
+    echo ""
+    echo "Stopping Motor Triage Demo..."
+
+    for PID_FILE in "$LOG_DIR"/*.pid; do
+
+        if [ -f "$PID_FILE" ]; then
+
+            PID=$(cat "$PID_FILE")
+
+            if kill -0 "$PID" 2>/dev/null; then
+                echo "Stopping PID $PID..."
+                kill -- "-$PID" 2>/dev/null || kill "$PID" 2>/dev/null
+            fi
+
+            rm -f "$PID_FILE"
+
+        fi
+
+    done
+
+    echo "Demo stopped."
+
+}
+
+trap cleanup EXIT INT TERM
+
+while true; do
+    sleep 60
+done
