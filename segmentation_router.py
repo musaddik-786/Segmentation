@@ -1,10 +1,10 @@
-for this did it worked fine?
-   "/home/JarvisClaims/Musaddique/cedera/treaty_pdfs/TRT-2026-002_Property_Surplus.pdf"
+this is for
+   "/home/JarvisClaims/Musaddique/cedera/treaty_pdfs/TRT-2026-003_Property_Catastrophe_XoL.pdf"
 
-
+i hope you are verifying from pdf as well
 
 (venv) JarvisClaims@JarvisClaims:~/Musaddique/cedera$ python3 -m  ingestion.test_clause_chunker
-Documents / Pages: 7
+Documents / Pages: 9
 Total chunks: 38
 
 ================================================================================
@@ -14,12 +14,13 @@ Article:     None
 Clause:      None
 --------------------------------------------------------------------------------
 REINSURANCE AGREEMENT
-PROPERTY SURPLUS REINSURANCE AGREEMENT
-Reference TRT-2026-002
+PROPERTY CATASTROPHE EXCESS OF LOSS
+PROGRAMME
+Reference TRT-2026-003
 Reassured
 Northgate Mutual Insurance Company Limited
 Reinsurer
-Atlas Re Company Limited
+Consortium led by Sable Re Limited
 Reinsurer's share
 100 per cent
 Intermediary
@@ -27,7 +28,7 @@ Calderwood Reinsurance Brokers LLP
 Class of business
 Property
 Type
-Proportional — Surplus
+Non-proportional — Excess of Loss
 Period
 01 January 2026 to 31 December 2026, both days inclusive, local standard
 time at the place where the risk is situated
@@ -40,7 +41,7 @@ Active
 This Agreement records the terms upon which the Reinsurer agrees to indemnify the Reassured in respect of the
 business described herein. It is subject to the Articles, Schedules and Endorsements which follow and which
 together form one contract.
-contract, the parties named do not exist, and it must not be relied upon for any commercial or legal purpose.
+Property Catastrophe Excess of Loss Programme
 
 ================================================================================
 Chunk:       2
@@ -113,17 +114,17 @@ Article:     ARTICLE 2 — BUSINESS COVERED
 Clause:      None
 --------------------------------------------------------------------------------
 ARTICLE 2 — BUSINESS COVERED
-This Agreement applies to all Original Policies classified by the Company as Commercial Property and
-Commercial Combined business written or renewed during the Period, where the Sum Insured exceeds the
-Company's retention stated in Article 5.
-The perils covered comprise fire, lightning, explosion, aircraft impact, riot and civil commotion, malicious
-damage, storm, tempest, flood, escape of water, impact by vehicles, theft following forcible entry and accidental
-damage.
-Flood and inundation perils ARE included within the Business Covered hereunder where such perils are insured
-under the Original Policy. This position differs from that under the Company's catastrophe excess of loss
-programme and the two contracts are to be read independently.
-Householders and small commercial risks with a Sum Insured below the retention are excluded, such business
-being ceded under the Company's quota share arrangement.
+This Agreement protects the net retained account of the Company in respect of Commercial Property,
+Commercial Combined and Householders business, after deduction of all proportional reinsurances, whether
+such proportional reinsurances are collected or not.
+Property Catastrophe Excess of Loss Programme
+The Company shall be deemed to retain for its own account, and shall not otherwise reinsure, the amounts
+specified in Section 5.2 below.
+Cover applies on a Loss Occurrence basis as defined in Clause 1.3 and responds only where two or more
+Original Policies are affected by the same Loss Occurrence.
+Perils covered comprise windstorm, tempest, hail, snow load, freeze, earthquake, subsidence consequent upon
+earthquake, riot and civil commotion, and malicious damage, in each case subject to the exclusions set out in
+Article 4.
 
 ================================================================================
 Chunk:       7
@@ -146,7 +147,9 @@ Article:     ARTICLE 4 — EXCLUSIONS
 Clause:      None
 --------------------------------------------------------------------------------
 ARTICLE 4 — EXCLUSIONS
-This Agreement does not cover any loss arising directly or indirectly from the following.
+This Agreement does not cover, and the Reinsurer shall have no liability whatsoever in respect of, any loss
+arising directly or indirectly from the following. This Article operates independently of the terms of the
+Company's proportional reinsurances and of the Original Policies.
 
 ================================================================================
 Chunk:       9
@@ -163,8 +166,13 @@ Page:        3
 Article:     ARTICLE 4 — EXCLUSIONS
 Clause:      4(b)
 --------------------------------------------------------------------------------
-4(b)  Nuclear energy risks, including any loss or liability directly or indirectly caused by or contributed to by
-ionising radiation or contamination by radioactivity from any nuclear fuel or nuclear waste.
+4(b)  Flood, inundation, the escape of water from the normal confines of any natural or artificial watercourse,
+lake, reservoir, canal or dam, and rising surface water howsoever caused, whether or not attributable to or
+accompanied by any other peril otherwise covered hereunder. For the avoidance of doubt, this exclusion
+applies notwithstanding that flood may form part of the Business Covered under the Company's proportional
+reinsurances. Storm surge arising directly from a named windstorm and occurring within the seventy-two
+hour period defined in Clause 1.3(a) is NOT excluded by this paragraph and shall be treated as windstorm
+damage.
 
 ================================================================================
 Chunk:       11
@@ -172,8 +180,8 @@ Page:        3
 Article:     ARTICLE 4 — EXCLUSIONS
 Clause:      4(c)
 --------------------------------------------------------------------------------
-4(c)  Any liability arising under any pool, association or scheme of compulsory insurance, save where
-participation therein is declared to and accepted by the Reinsurer in writing.
+4(c)  Nuclear energy risks, including any loss directly or indirectly caused by or contributed to by ionising
+radiation or contamination by radioactivity.
 
 ================================================================================
 Chunk:       12
@@ -181,7 +189,8 @@ Page:        3
 Article:     ARTICLE 4 — EXCLUSIONS
 Clause:      4(d)
 --------------------------------------------------------------------------------
-4(d)  Financial guarantee, insolvency and credit business of every description.
+4(d)  Losses arising from subsidence, ground heave or landslip, unless directly consequent upon earthquake
+covered hereunder.
 
 ================================================================================
 Chunk:       13
@@ -189,8 +198,8 @@ Page:        3
 Article:     ARTICLE 4 — EXCLUSIONS
 Clause:      4(e)
 --------------------------------------------------------------------------------
-4(e)  Land-based transit risks where the transit forms the predominant exposure, such business being
-reinsured elsewhere.
+4(e)  Cyber events, as more particularly defined in Section 4.2, including business interruption arising
+therefrom.
 
 ================================================================================
 Chunk:       14
@@ -198,9 +207,7 @@ Page:        3
 Article:     ARTICLE 4 — EXCLUSIONS
 Clause:      4(f)
 --------------------------------------------------------------------------------
-4(f)  Losses arising from cyber events, being the unauthorised access to, use of, or interference with any
-computer system, save that this exclusion shall not apply to physical damage by fire or explosion consequent
-upon such an event.
+4(f)  Any loss occurring outside the Territorial Scope set out in Article 3.
 
 ================================================================================
 Chunk:       15
@@ -208,127 +215,146 @@ Page:        3
 Article:     ARTICLE 4 — EXCLUSIONS
 Clause:      4(g)
 --------------------------------------------------------------------------------
-4(g)  Terrorism, save that this exclusion shall not apply to physical loss or damage arising from fire or
-explosion where such loss is covered under a government-backed terrorism reinsurance arrangement to
-which the Company is a member.
+4(g)  Marine, aviation and transit business of every description.
 
 ================================================================================
 Chunk:       16
 Page:        3
-Article:     ARTICLE 5 — RETENTION AND CESSION
-Clause:      None
+Article:     ARTICLE 4 — EXCLUSIONS
+Clause:      4(h)
 --------------------------------------------------------------------------------
-ARTICLE 5 — RETENTION AND CESSION
+4(h)  Losses to crops, standing timber, livestock and growing produce.
 
 ================================================================================
 Chunk:       17
 Page:        3
-Article:     ARTICLE 5 — RETENTION AND CESSION
-Clause:      5.1
+Article:     ARTICLE 4 — EXCLUSIONS
+Clause:      4.2
 --------------------------------------------------------------------------------
-5.1  The Line
-The Company shall retain for its own account a first amount, referred to as one line, of GBP 500,000 in
-respect of each and every risk falling within the Business Covered.
+4.2  Cyber Definition
+A cyber event means the unauthorised access to, use of, or interference with any computer system, network,
+software or data, including the introduction of malicious code and the encryption or corruption of data.
 
 ================================================================================
 Chunk:       18
 Page:        4
-Article:     ARTICLE 5 — RETENTION AND CESSION
-Clause:      5.2
+Article:     ARTICLE 4 — EXCLUSIONS
+Clause:      4.3
 --------------------------------------------------------------------------------
-5.2  Cession
-The Company may cede, and the Reinsurer shall accept, the surplus of each risk over the Company's
-retention, up to a maximum of 4 lines, being GBP 2,000,000 in all.
-The proportion ceded in respect of any risk shall be the amount ceded divided by the total Sum Insured of
-that risk, and premium and losses shall be shared in that same proportion.
+4.3  Relationship with Other Reinsurances
+Nothing in Article 4 shall be construed as restricting the cover granted under any proportional reinsurance of
+the Company. A peril excluded hereunder may nonetheless be reinsured under those contracts, in which case
+Property Catastrophe Excess of Loss Programme
+the recoveries thereunder shall be deducted in arriving at Ultimate Net Loss for the purposes of this
+Agreement.
 
 ================================================================================
 Chunk:       19
 Page:        4
-Article:     ARTICLE 5 — RETENTION AND CESSION
-Clause:      5.3
+Article:     ARTICLE 5 — ATTACHMENT, LIMIT AND RETENTION
+Clause:      None
 --------------------------------------------------------------------------------
-5.3  Risks Below the Retention
-Where the Sum Insured of a risk does not exceed GBP 500,000, no cession shall be made hereunder and the
-Company shall retain the whole of such risk.
+ARTICLE 5 — ATTACHMENT, LIMIT AND RETENTION
 
 ================================================================================
 Chunk:       20
 Page:        4
-Article:     ARTICLE 5 — RETENTION AND CESSION
-Clause:      5.4
+Article:     ARTICLE 5 — ATTACHMENT, LIMIT AND RETENTION
+Clause:      5.1
 --------------------------------------------------------------------------------
-5.4  Risks Exceeding Treaty Capacity
-Where the Sum Insured of a risk exceeds the sum of the Company's retention and the treaty capacity, being
-GBP 2,500,000 in all, the excess shall not be reinsured hereunder. The Company shall be free to place such
-excess by facultative reinsurance or to retain it, and shall declare the arrangement in the risk bordereau
-rendered under Article 10.
-Worked illustration. On a risk with a Sum Insured of GBP 2,500,000, the Company retains GBP 500,000,
-cedes GBP 2,000,000 hereunder being the full 4 lines, and the remaining GBP 0 falls outside this Agreement.
+5.1  Layers
+The Reinsurer shall pay the amount of Ultimate Net Loss arising from each Loss Occurrence in excess of the
+attachment point specified for each layer, up to but not exceeding the limit for that layer, as set out below and
+in Schedule A.
+Layer
+Limit
+Excess of
+Aggregate limit
+Reinstatements
+Layer 1
+GBP 500,000
+GBP 500,000
+GBP 1,000,000
+1
+Layer 2
+GBP 4,000,000
+GBP 1,000,000
+GBP 12,000,000
+2
+Layer 3
+GBP 15,000,000
+GBP 5,000,000
+GBP 30,000,000
+1
 
 ================================================================================
 Chunk:       21
 Page:        4
-Article:     ARTICLE 5 — RETENTION AND CESSION
-Clause:      5.5
+Article:     ARTICLE 5 — ATTACHMENT, LIMIT AND RETENTION
+Clause:      5.2
 --------------------------------------------------------------------------------
-5.5  Event Limit
-The maximum amount recoverable hereunder in respect of any one Loss Occurrence, as defined in Clause
-1.3, shall not exceed GBP 12,000,000.
+5.2  Net Retention
+The Company shall retain net for its own account, and shall not otherwise reinsure, the first GBP 500,000 of
+Ultimate Net Loss arising from each Loss Occurrence.
+For the avoidance of doubt, Ultimate Net Loss is arrived at after deduction of all recoveries under the
+Company's proportional reinsurances, whether such recoveries are collected or not.
 
 ================================================================================
 Chunk:       22
 Page:        4
-Article:     ARTICLE 6 — PREMIUM
-Clause:      None
+Article:     ARTICLE 5 — ATTACHMENT, LIMIT AND RETENTION
+Clause:      5.3
 --------------------------------------------------------------------------------
-ARTICLE 6 — PREMIUM
-The Company shall cede to the Reinsurer premium in the same proportion as the Sum Insured ceded bears to the
-total Sum Insured of the Original Policy, calculated risk by risk in accordance with Article 5.
-Premium shall be accounted for quarterly in arrears within sixty days of the close of each calendar quarter, in
-accordance with Article 11.
-“Gross net written premium” means the gross premium written by the Company less returns, cancellations and
-premiums paid for any reinsurance recoveries from which the Reinsurer benefits hereunder, but before
-deduction of the Company's internal acquisition costs.
-Portfolio premium transfers at inception and expiry shall be effected at the rate specified in Schedule A where
-applicable.
+5.3  Order of Application
+Where a Loss Occurrence engages more than one layer, the layers shall respond in ascending order, each
+layer attaching only when the layer immediately below it has been exhausted or its attachment point has been
+reached.
+Worked illustration. On an Ultimate Net Loss of GBP 5,400,000 arising from a single Loss Occurrence,
+and assuming no prior erosion, the Company retains GBP 500,000; Layer 1 pays GBP 500,000; and the
+remaining layers respond in turn up to their respective limits.
 
 ================================================================================
 Chunk:       23
 Page:        4
-Article:     ARTICLE 7 — COMMISSION
-Clause:      None
+Article:     ARTICLE 5 — ATTACHMENT, LIMIT AND RETENTION
+Clause:      5.4
 --------------------------------------------------------------------------------
-ARTICLE 7 — COMMISSION
+5.4  Effect of Prior Erosion
+Where the limit of a layer has been reduced by an earlier Loss Occurrence, only the unexhausted balance of
+that limit shall be available in respect of any subsequent Loss Occurrence, until such time as the limit is
+reinstated in accordance with Article 9. Reinstatement shall take effect from the time of the Loss Occurrence
+which gave rise to it and shall not operate retrospectively to increase the amount recoverable in respect of
+that same Loss Occurrence.
 
 ================================================================================
 Chunk:       24
-Page:        4
-Article:     ARTICLE 7 — COMMISSION
-Clause:      7.1
+Page:        5
+Article:     ARTICLE 6 — PREMIUM
+Clause:      None
 --------------------------------------------------------------------------------
-7.1  Ceding Commission
-The Reinsurer shall allow the Company a ceding commission of 30.0 per cent on all premium ceded
-hereunder, such commission to cover the Company's acquisition costs, brokerage, taxes and internal
-expenses.
-Ceding commission shall be deducted at source in the quarterly accounts rendered under Article 11 and shall
-not be subject to adjustment save as provided below.
+ARTICLE 6 — PREMIUM
+The premium payable hereunder shall be calculated as the rate on line specified for each layer in Schedule A
+applied to the Company's estimated subject premium income for the Period.
+A deposit premium shall be payable in four equal quarterly instalments in advance, and shall be adjusted at
+expiry against the actual subject premium income, subject always to the minimum premium stated for each
+layer.
+Layer 1: deposit premium GBP 180,000, minimum premium GBP 144,000, rate on line 36.00 per cent.
+Layer 2: deposit premium GBP 520,000, minimum premium GBP 416,000, rate on line 13.00 per cent.
+Layer 3: deposit premium GBP 675,000, minimum premium GBP 540,000, rate on line 4.50 per cent.
+Property Catastrophe Excess of Loss Programme
+Adjustment premium, if any, shall be settled within ninety days of the close of the Period. No return of premium
+shall be made below the minimum premium stated above.
 
 ================================================================================
 Chunk:       25
 Page:        5
 Article:     ARTICLE 7 — COMMISSION
-Clause:      7.2
+Clause:      None
 --------------------------------------------------------------------------------
-7.2  Profit Commission
-In addition, the Reinsurer shall allow the Company a profit commission of 12.5 per cent of the net profit
-arising to the Reinsurer under this Agreement, calculated in accordance with Section 7.2 below.
-For the purpose of calculating profit commission, the net profit shall be the ceded premium less ceded losses
-paid and outstanding, less ceding commission, less a management expense allowance of 5.0 per cent of
-ceded premium, and less any deficit carried forward from the preceding two treaty years.
-Profit commission shall be calculated annually and settled within ninety days of the close of the treaty year.
-Any deficit shall be carried forward for a maximum of two successive treaty years and shall be extinguished
-thereafter.
+ARTICLE 7 — COMMISSION
+No ceding commission is allowed under this Agreement.
+Brokerage of 10 per cent is payable by the Reinsurer to the Intermediary named in the Preamble and is included
+within the premium rates stated in Article 6.
 
 ================================================================================
 Chunk:       26
@@ -340,8 +366,8 @@ ARTICLE 8 — CLAIMS
 The Company shall advise the Reinsurer as soon as practicable of any loss which, in the Company's reasonable
 estimation, may result in a claim under this Agreement.
 Without prejudice to the generality of the foregoing, the Company shall advise the Reinsurer within fourteen
-days of any individual loss where the amount ceded hereunder is reasonably estimated to exceed 250,000, and
-shall report all other losses through the claims bordereau rendered under Article 10.
+days of any Loss Occurrence which the Company estimates may exceed fifty per cent of the attachment point of
+the lowest layer placed hereunder.
 The Reinsurer shall settle its proportion of all claims within thirty days of receipt of a properly documented cash
 call or quarterly account, as applicable.
 The Company shall have the sole right to settle, compromise or resist any claim under an Original Policy, and
@@ -354,19 +380,36 @@ borne, after deduction of the reasonable costs of obtaining such recoveries.
 
 ================================================================================
 Chunk:       27
-Page:        5
-Article:     ARTICLE 9 — LOSS OCCURRENCE AND AGGREGATION
+Page:        6
+Article:     ARTICLE 9 — REINSTATEMENT
 Clause:      None
 --------------------------------------------------------------------------------
-ARTICLE 9 — LOSS OCCURRENCE AND AGGREGATION
-Clause 1.3 governs the aggregation of individual losses into one Loss Occurrence for the purposes of Section
-5.5.
-Storm, tempest and flood losses occurring within the periods defined in Clause 1.3 shall be aggregated
-notwithstanding that they may affect risks in different locations.
+ARTICLE 9 — REINSTATEMENT
+Each layer placed hereunder is subject to the number of reinstatements stated below. Where a loss payment
+reduces the limit of any layer, the amount so reduced shall be automatically reinstated from the time of the Loss
+Occurrence, subject always to the aggregate limit stated in Schedule A.
+Layer 1 (GBP 500,000 excess of GBP 500,000): one reinstatement, at 100 per cent additional premium, pro rata
+as to amount and pro rata as to time. The aggregate liability of the Reinsurer in respect of this layer shall not
+exceed GBP 1,000,000 in all during the Period.
+Layer 2 (GBP 4,000,000 excess of GBP 1,000,000): 2 reinstatements, at 100 per cent additional premium, pro
+rata as to amount and pro rata as to time. The aggregate liability of the Reinsurer in respect of this layer shall not
+exceed GBP 12,000,000 in all during the Period.
+Layer 3 (GBP 15,000,000 excess of GBP 5,000,000): one reinstatement, at 100 per cent additional premium, pro
+rata as to amount and pro rata as to time. The aggregate liability of the Reinsurer in respect of this layer shall not
+exceed GBP 30,000,000 in all during the Period.
+Reinstatement premium shall be calculated on the deposit premium for the layer concerned, multiplied by the
+proportion which the amount reinstated bears to the layer limit, and further multiplied by the proportion which
+the unexpired period bears to the full Period of this Agreement.
+Reinstatement premium shall be due at the date of the Loss Occurrence giving rise to it and shall be settled
+within sixty days of agreement of the loss.
+Where the aggregate limit of a layer has been exhausted, no further reinstatement shall be available and the
+Reinsurer shall have no further liability in respect of that layer for the remainder of the Period, notwithstanding
+any provision of Article 13.
+Property Catastrophe Excess of Loss Programme
 
 ================================================================================
 Chunk:       28
-Page:        5
+Page:        6
 Article:     ARTICLE 10 — BORDEREAUX AND REPORTING
 Clause:      None
 --------------------------------------------------------------------------------
@@ -376,31 +419,21 @@ bordereaux specified below in a form agreed between the parties.
 
 ================================================================================
 Chunk:       29
-Page:        5
+Page:        6
 Article:     ARTICLE 10 — BORDEREAUX AND REPORTING
 Clause:      8.1
 --------------------------------------------------------------------------------
-8.1 A premium bordereau, showing for each Original Policy ceded: the policy reference, the name of the
-insured, the class of business, the period of insurance, the Sum Insured, the proportion ceded, the gross
-premium, the premium ceded and the ceding commission thereon.
+8.1 An aggregate exposure return, showing the Company's net retained exposure by zone and by class, rendered
+semi-annually as at 30 June and 31 December.
 
 ================================================================================
 Chunk:       30
-Page:        5
+Page:        6
 Article:     ARTICLE 10 — BORDEREAUX AND REPORTING
 Clause:      8.2
 --------------------------------------------------------------------------------
-8.2 A claims bordereau, showing for each loss: the policy reference, the date of loss, the peril, the gross amount
-paid and outstanding, and the amount ceded hereunder.
-
-================================================================================
-Chunk:       31
-Page:        5
-Article:     ARTICLE 10 — BORDEREAUX AND REPORTING
-Clause:      8.3
---------------------------------------------------------------------------------
-8.3 A risk bordereau, showing the Sums Insured in force at the close of the quarter analysed by class and by
-band of Sum Insured.
+8.2 A catastrophe loss advice in respect of each Loss Occurrence, showing the individual Original Policies
+affected, the gross loss, the proportional recoveries deducted, and the resulting Ultimate Net Loss.
 The Reinsurer shall notify the Company of any discrepancy identified in a bordereau within sixty days of
 receipt. In the absence of such notification the bordereau shall be deemed agreed, save in the case of manifest
 error or fraud.
@@ -408,7 +441,7 @@ Where a discrepancy is agreed between the parties, adjustment shall be made in t
 rendered under Article 11.
 
 ================================================================================
-Chunk:       32
+Chunk:       31
 Page:        6
 Article:     ARTICLE 11 — ACCOUNTS AND SETTLEMENT
 Clause:      None
@@ -424,7 +457,7 @@ Interest shall accrue on balances outstanding beyond the periods stated above at
 the Bank of England base rate from time to time.
 
 ================================================================================
-Chunk:       33
+Chunk:       32
 Page:        6
 Article:     ARTICLE 12 — INSPECTION OF RECORDS
 Clause:      None
@@ -436,7 +469,7 @@ Such right shall continue for a period of three years following the final settle
 this Agreement, and shall survive its termination.
 
 ================================================================================
-Chunk:       34
+Chunk:       33
 Page:        6
 Article:     ARTICLE 13 — ERRORS AND OMISSIONS
 Clause:      None
@@ -448,7 +481,7 @@ This Clause shall not operate so as to extend cover beyond the scope of the Busi
 any limit which has been exhausted.
 
 ================================================================================
-Chunk:       35
+Chunk:       34
 Page:        6
 Article:     ARTICLE 14 — INSOLVENCY
 Clause:      None
@@ -461,12 +494,13 @@ The liquidator, receiver or statutory successor of the Company shall give writte
 pendency of any claim against the Company within a reasonable time after such claim is filed.
 
 ================================================================================
-Chunk:       36
-Page:        6
+Chunk:       35
+Page:        7
 Article:     ARTICLE 15 — ARBITRATION
 Clause:      None
 --------------------------------------------------------------------------------
 ARTICLE 15 — ARBITRATION
+Property Catastrophe Excess of Loss Programme
 All disputes arising out of or in connection with this Agreement shall be referred to arbitration in London before
 a tribunal of three arbitrators, one to be appointed by each party and the third by the two so appointed.
 The arbitrators shall be persons with not less than ten years' experience of insurance or reinsurance business as
@@ -476,7 +510,7 @@ The award of the tribunal shall be final and binding upon both parties. The seat
 England and Wales.
 
 ================================================================================
-Chunk:       37
+Chunk:       36
 Page:        7
 Article:     ARTICLE 16 — GOVERNING LAW AND JURISDICTION
 Clause:      None
@@ -486,30 +520,91 @@ This Agreement shall be governed by the laws of England and Wales.
 Subject to Article 15, the courts of England and Wales shall have exclusive jurisdiction.
 
 ================================================================================
+Chunk:       37
+Page:        8
+Article:     ARTICLE 17 — SUNSET AND RUN-OFF
+Clause:      None
+--------------------------------------------------------------------------------
+ARTICLE 17 — SUNSET AND RUN-OFF
+The Reinsurer shall have no liability in respect of any Loss Occurrence first advised to it more than thirty-six
+months after the expiry of the Period.
+This Article shall not apply where the Company has given notice of a potential circumstance under Article 8
+within the Period.
+Property Catastrophe Excess of Loss Programme
+
+================================================================================
 Chunk:       38
-Page:        7
+Page:        9
 Article:     SCHEDULE A — SUMMARY OF TERMS
 Clause:      None
 --------------------------------------------------------------------------------
 SCHEDULE A — SUMMARY OF TERMS
-Treaty reference
-Retention (one line)
+Layer
+Limit
+Excess of
+Aggregate
+Reinst.
+Deposit prem.
+Min. prem.
+ROL
+1
 GBP 500,000
-Number of lines
-4
-Treaty capacity
-GBP 2,000,000
-Maximum any one risk (incl.
-retention)
-GBP 2,500,000
-Event limit
-GBP 12,000,000
-Ceding commission
-30.0 per cent
-Profit commission
-12.5 per cent
+GBP 500,000
+GBP
+1,000,000
+1
+GBP 180,000
+GBP
+144,000
+36.00
+%
+2
+GBP
+4,000,000
+GBP
+1,000,000
+GBP
+12,000,000
+2
+GBP 520,000
+GBP
+416,000
+13.00
+%
+3
+GBP
+15,000,000
+GBP
+5,000,000
+GBP
+30,000,000
+1
+GBP 675,000
+GBP
+540,000
+4.50%
+Treaty reference
+Basis
+Losses occurring during the Period
+Net retention
+GBP 500,000
 Currency
 GBP
-Accounting
-Quarterly in arrears
+Brokerage
+10 per cent, included in the rates above
+Property Catastrophe Excess of Loss Programme
+ENDORSEMENT NO. 1 — HOURS CLAUSE AMENDMENT
+It is hereby noted and agreed that with effect from 1 July 2026 the period specified in Clause 1.3(a) in respect of
+windstorm, tempest, hurricane, tornado, cyclone and typhoon is amended from 72 to 96 consecutive hours.
+This amendment applies only to Loss Occurrences commencing on or after the effective date stated below. The
+72 hour period continues to apply to any Loss Occurrence commencing before that date.
+For the avoidance of doubt, no other provision of Clause 1.3 is amended, and in particular the 168 hour period in
+Clause 1.3(b) is unchanged. The exclusion in Article 4(b) remains in full force and effect and is unaffected by
+this Endorsement.
+Endorsement number
+1
+Effective date
+1 July 2026
+All other terms
+Unchanged
 (venv) JarvisClaims@JarvisClaims:~/Musaddique/cedera$ 
